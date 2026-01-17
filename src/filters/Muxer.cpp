@@ -49,6 +49,17 @@ namespace pb
             return false;
         }
 
+        // RTSP 特定配置
+        AVDictionary *options = nullptr;
+        if (m_url.find("rtsp://") == 0)
+        {
+            // 强制使用 TCP 传输，避免 UDP 丢包导致花屏
+            av_dict_set(&options, "rtsp_transport", "tcp", 0);
+            // 设置超时时间
+            av_dict_set(&options, "stimeout", "5000000", 0);
+            spdlog::info("RTSP muxer configured with TCP transport");
+        }
+
         m_outStream = avformat_new_stream(m_formatCtx, nullptr);
         if (!m_outStream)
         {
@@ -73,12 +84,16 @@ namespace pb
             }
         }
 
-        if (avformat_write_header(m_formatCtx, nullptr) < 0)
+        if (avformat_write_header(m_formatCtx, &options) < 0)
         {
             spdlog::error("Error occurred when opening output URL");
+            if (options)
+                av_dict_free(&options);
             return false;
         }
 
+        if (options)
+            av_dict_free(&options);
         spdlog::info("Muxer initialized for URL: {}", m_url);
         return true;
     }

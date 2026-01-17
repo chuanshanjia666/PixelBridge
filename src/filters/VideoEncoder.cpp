@@ -92,8 +92,8 @@ namespace pb
         m_codecCtx->height = height;
         m_codecCtx->time_base = {1, fps};
         m_codecCtx->framerate = {fps, 1};
-        m_codecCtx->gop_size = 10;
-        m_codecCtx->max_b_frames = 1;
+        m_codecCtx->gop_size = 30;    // 增大 GOP 周期
+        m_codecCtx->max_b_frames = 0; // 彻底禁用 B 帧，解决 RTSP 解码 POC 错误
 
         if (!m_hwTypeName.empty())
         {
@@ -112,18 +112,17 @@ namespace pb
             m_codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
         }
 
-        if (m_codecCtx->flags & AV_CODEC_FLAG_GLOBAL_HEADER)
-        {
-            m_codecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-        }
+        // 确保不使用全局头，而是将 SPS/PPS 放入每个 IDR 帧中
+        // 这对于 RTSP 这种允许客户端随时加入的流非常重要
+        m_codecCtx->flags &= ~AV_CODEC_FLAG_GLOBAL_HEADER;
 
         AVDictionary *options = nullptr;
         if (m_codecName == "libx264")
         {
             av_dict_set(&options, "preset", "veryfast", 0);
             av_dict_set(&options, "tune", "zerolatency", 0);
-            // 确保 SPS/PPS 随每个 IDR 帧发送，方便接收端随时接入
-            av_dict_set(&options, "x264-params", "nal-hrd=cbr:force-cfr=1", 0);
+            // 强制开启重复头
+            av_dict_set(&options, "x264-params", "repeat-headers=1:nal-hrd=cbr:force-cfr=1", 0);
         }
         else if (m_codecName.find("nvenc") != std::string::npos)
         {
