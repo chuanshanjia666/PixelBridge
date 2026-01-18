@@ -1,97 +1,173 @@
 #include "filters/Demuxer.h"
 #include <iostream>
+#include <chrono>
 #include <spdlog/spdlog.h>
 
-namespace pb {
+namespace pb
+{
 
-Demuxer::Demuxer(const std::string& url) : Filter("Demuxer"), m_url(url) {}
+    Demuxer::Demuxer(const std::string &url) : Filter("Demuxer"), m_url(url) {}
 
-Demuxer::~Demuxer() {
-    stop();
-    if (m_formatCtx) {
-        avformat_close_input(&m_formatCtx);
-    }
-}
-
-bool Demuxer::initialize() {
-    AVDictionary* options = nullptr;
-    
-    // Check if it's a UDP stream and apply specific options
-    if (m_url.find("udp://") == 0) {
-        spdlog::info("Detected UDP stream, applying network options...");
-        av_dict_set(&options, "fifo_size", "1000000", 0);
-        av_dict_set(&options, "buffer_size", "1000000", 0);
-        av_dict_set(&options, "overrun_nonfatal", "1", 0);
-        av_dict_set(&options, "timeout", "5000000", 0); // 5 seconds timeout
-    }
-
-    if (avformat_open_input(&m_formatCtx, m_url.c_str(), nullptr, &options) != 0) {
-        spdlog::error("Could not open input: {}", m_url);
-        if (options) av_dict_free(&options);
-        return false;
-    }
-
-    if (options) av_dict_free(&options);
-
-    if (avformat_find_stream_info(m_formatCtx, nullptr) < 0) {
-        spdlog::error("Could not find stream information");
-        return false;
-    }
-
-    for (unsigned int i = 0; i < m_formatCtx->nb_streams; i++) {
-        if (m_formatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-            m_videoStreamIndex = i;
-            break;
+    Demuxer::~Demuxer()
+    {
+        stop();
+        if (m_formatCtx)
+        {
+            avformat_close_input(&m_formatCtx);
         }
     }
 
-    if (m_videoStreamIndex == -1) {
-        spdlog::error("Could not find video stream");
-        return false;
+    bool Demuxer::initialize()
+    {
+        AVDictionary *options = nullptr;
+
+        // Check if it's a UDP stream and apply specific options
+        if (m_url.find("udp://") == 0)
+        {
+            spdlog::info("Detected UDP stream, applying network options...");
+            av_dict_set(&options, "fifo_size", "1000000", 0);
+            av_dict_set(&options, "buffer_size", "1000000", 0);
+            av_dict_set(&options, "overrun_nonfatal", "1", 0);
+            av_dict_set(&options, "timeout", "5000000", 0); // 5 seconds timeout
+        }
+
+        if (avformat_open_input(&m_formatCtx, m_url.c_str(), nullptr, &options) != 0)
+        {
+            spdlog::error("Could not open input: {}", m_url);
+            if (options)
+                av_dict_free(&options);
+            return false;
+        }
+
+        if (options)
+            av_dict_free(&options);
+
+        if (avformat_find_stream_info(m_formatCtx, nullptr) < 0)
+        {
+            spdlog::error("Could not find stream information");
+            return false;
+        }
+
+        for (unsigned int i = 0; i < m_formatCtx->nb_streams; i++)
+        {
+            if (m_formatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+            {
+                m_videoStreamIndex = i;
+                break;
+            }
+        }
+
+        if (m_videoStreamIndex == -1)
+        {
+            spdlog::error("Could not find video stream");
+            return false;
+        }
+
+        spdlog::info("Demuxer initialized for URL: {}", m_url);
+        if (m_formatCtx->iformat)
+        {
+            spdlog::info("Input format: {}", m_formatCtx->iformat->long_name);
+        }
+        return true;
     }
 
-    spdlog::info("Demuxer initialized for URL: {}", m_url);
-    if (m_formatCtx->iformat) {
-        spdlog::info("Input format: {}", m_formatCtx->iformat->long_name);
+    void Demuxer::process(DataPacket::Ptr packet)
+    {
+        // Demuxer is a source filter, it doesn't process incoming packets.
     }
-    return true;
-}
 
-void Demuxer::process(DataPacket::Ptr packet) {
-    // Demuxer is a source filter, it doesn't process incoming packets.
-}
-
-void Demuxer::start() {
-    m_running = true;
-    m_thread = std::thread(&Demuxer::run, this);
-}
-
-AVCodecParameters* Demuxer::getVideoCodecParameters() const {
-    if (m_videoStreamIndex == -1) return nullptr;
-    return m_formatCtx->streams[m_videoStreamIndex]->codecpar;
-}
-
-void Demuxer::stop() {
-    m_running = false;
-    if (m_thread.joinable()) {
-        m_thread.join();
+    void Demuxer::start()
+    {
+        m_running = true;
+        m_thread = std::thread(&Demuxer::run, this);
     }
-}
 
-void Demuxer::run() {
-    while (m_running) {
-        auto pktWrapper = std::make_shared<AVPacketWrapper>();
-        if (av_read_frame(m_formatCtx, pktWrapper->get()) >= 0) {
-            if (pktWrapper->get()->stream_index == m_videoStreamIndex) {
-                if (m_next) {
-                    m_next->process(pktWrapper);
+    AVCodecParameters *Demuxer::getVideoCodecParameters() const
+    {
+        if (m_videoStreamIndex == -1)
+            return nullptr;
+        return m_formatCtx->streams[m_videoStreamIndex]->codecpar;
+    }
+
+    void Demuxer::stop()
+    {
+        m_running = false;
+        if (m_thread.joinable())
+        {
+            m_thread.join();
+        }
+    }
+
+    void Demuxer::run()
+    {
+        auto startTime = std::chrono::steady_clock::now();
+        int64_t firstTimestamp = AV_NOPTS_VALUE;
+        AVRational timeBase = {1, 1000};
+        if (m_videoStreamIndex >= 0 && m_videoStreamIndex < (int)m_formatCtx->nb_streams)
+        {
+            timeBase = m_formatCtx->streams[m_videoStreamIndex]->time_base;
+        }
+
+        // Determine if we should pace.
+        // Generally, if it's a network stream, we don't pace because it's already real-time.
+        // If it's a local file, we must pace.
+        bool shouldPace = true;
+        if (m_url.find("rtsp://") == 0 || m_url.find("udp://") == 0 || m_url.find("rtp://") == 0)
+        {
+            shouldPace = false;
+        }
+
+        while (m_running)
+        {
+            auto pktWrapper = std::make_shared<AVPacketWrapper>();
+            if (av_read_frame(m_formatCtx, pktWrapper->get()) >= 0)
+            {
+                if (pktWrapper->get()->stream_index == m_videoStreamIndex)
+                {
+                    if (shouldPace)
+                    {
+                        int64_t ts = pktWrapper->get()->dts;
+                        if (ts == AV_NOPTS_VALUE)
+                            ts = pktWrapper->get()->pts;
+
+                        if (ts != AV_NOPTS_VALUE)
+                        {
+                            if (firstTimestamp == AV_NOPTS_VALUE)
+                            {
+                                firstTimestamp = ts;
+                                startTime = std::chrono::steady_clock::now();
+                            }
+                            else
+                            {
+                                auto now = std::chrono::steady_clock::now();
+                                double elapsed = std::chrono::duration<double>(now - startTime).count();
+                                double target = (ts - firstTimestamp) * av_q2d(timeBase);
+
+                                if (target > elapsed)
+                                {
+                                    std::this_thread::sleep_for(std::chrono::duration<double>(target - elapsed));
+                                }
+                            }
+                        }
+                    }
+
+                    if (m_next)
+                    {
+                        static int demuxLog = 0;
+                        if (++demuxLog % 60 == 0)
+                        {
+                            spdlog::info("[Demuxer] Read packet pts={} from {}", pktWrapper->get()->pts, m_url);
+                        }
+                        m_next->process(pktWrapper);
+                    }
                 }
             }
-        } else {
-            // EOF or error
-            m_running = false;
+            else
+            {
+                // EOF or error
+                m_running = false;
+            }
         }
     }
-}
 
 } // namespace pb

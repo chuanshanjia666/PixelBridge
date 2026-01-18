@@ -28,19 +28,12 @@ namespace pb
             formatName = "rtsp";
         else if (m_url.find("rtp://") == 0)
         {
-            // 如果 URL 中包含 "ts" 关键字，则使用 RTP 封装 TS 流
-            if (m_url.find("ts") != std::string::npos)
-                formatName = "rtp_mpegts";
-            else
-                formatName = "rtp";
+            // 对于 RTP，默认使用 MPEG-TS 封装，这样接收端更容易处理（不需要 SDP）
+            formatName = "rtp_mpegts";
         }
         else if (m_url.find("udp://") == 0)
         {
-            // 如果 URL 中包含 "h264" 关键字，则尝试使用裸流格式
-            if (m_url.find("h264") != std::string::npos)
-                formatName = "h264";
-            else
-                formatName = "mpegts";
+            formatName = "mpegts";
         }
 
         if (avformat_alloc_output_context2(&m_formatCtx, nullptr, formatName, m_url.c_str()) < 0)
@@ -59,6 +52,11 @@ namespace pb
             av_dict_set(&options, "stimeout", "5000000", 0);
             spdlog::info("RTSP muxer configured with TCP transport");
         }
+
+        // 通用的极致低延迟配置
+        av_dict_set(&options, "buffer_size", "1024", 0);
+        av_dict_set(&options, "flush_packets", "1", 0);
+        av_dict_set(&options, "tune", "zerolatency", 0);
 
         m_outStream = avformat_new_stream(m_formatCtx, nullptr);
         if (!m_outStream)
@@ -109,6 +107,12 @@ namespace pb
         // Rescale timestamps from encoder timebase to muxer stream timebase
         av_packet_rescale_ts(pkt, m_srcTimeBase, m_outStream->time_base);
         pkt->stream_index = m_outStream->index;
+
+        static int muxLog = 0;
+        if (++muxLog % 60 == 0)
+        {
+            spdlog::info("[Muxer] Writing packet pts={}, size={} to {}", pkt->pts, pkt->size, m_url);
+        }
 
         if (av_interleaved_write_frame(m_formatCtx, pkt) < 0)
         {

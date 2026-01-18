@@ -3,6 +3,11 @@
 
 #include "core/Filter.h"
 
+extern "C"
+{
+#include <libswscale/swscale.h>
+}
+
 namespace pb
 {
 
@@ -30,6 +35,13 @@ namespace pb
         AVBufferRef *m_hwDeviceCtx = nullptr;
         AVBufferRef *m_hwFramesCtx = nullptr;
         int64_t m_pts = 0;
+
+        // SwsContext for internal format conversion if input doesn't match
+        SwsContext *m_swsContext = nullptr;
+        int m_swsWidth = 0;
+        int m_swsHeight = 0;
+        AVPixelFormat m_swsInFmt = AV_PIX_FMT_NONE;
+        AVPixelFormat m_swsOutFmt = AV_PIX_FMT_NONE;
     };
 
 } // namespace pb

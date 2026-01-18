@@ -19,6 +19,7 @@ pkg_check_modules(AVUTIL REQUIRED libavutil)
 pkg_check_modules(AVDEVICE REQUIRED libavdevice)
 pkg_check_modules(SWSCALE REQUIRED libswscale)
 pkg_check_modules(SPDLOG REQUIRED spdlog)
+pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0 gobject-2.0 glib-2.0)
 
 add_subdirectory(thirdparty)
 
@@ -30,6 +31,7 @@ include_directories(${AVDEVICE_INCLUDE_DIRS})
 include_directories(${SWSCALE_INCLUDE_DIRS})
 include_directories(${SPDLOG_INCLUDE_DIRS})
 include_directories(${LIVE555_INCLUDE_DIRS})
+include_directories(${GSTREAMER_INCLUDE_DIRS})
 
 set(SOURCES
     src/main.cpp
@@ -38,6 +40,7 @@ set(SOURCES
     src/filters/Demuxer.cpp
     src/filters/VideoDecoder.cpp
     src/filters/ScreenCapture.cpp
+    include/filters/ScreenCapture.h
     src/filters/VideoEncoder.cpp
     src/filters/Muxer.cpp
     src/filters/RtspServerFilter.cpp
@@ -63,4 +66,12 @@ target_link_libraries(PixelBridge
     Qt6::QuickControls2
     Qt6::Multimedia
     pthread
+)
+
+
+add_executable(bench_qt_capture tests/bench_qt_capture.cpp)
+target_link_libraries(bench_qt_capture 
+    Qt6::Core 
+    Qt6::Gui 
+    Qt6::Multimedia
 )

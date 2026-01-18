@@ -110,19 +110,37 @@ namespace pb
     RtspServerFilter::RtspServerFilter(int port, const std::string &streamName)
         : Filter("RtspServerFilter"), m_port(port), m_streamName(streamName)
     {
-        OutPacketBuffer::maxSize = 2560 * 1600 * 3;
     }
 
     RtspServerFilter::~RtspServerFilter()
     {
         stop();
+
+        // Final cleanup of Live555 objects
+        if (m_rtspServer)
+        {
+            Medium::close(m_rtspServer);
+        }
+        if (m_env)
+        {
+            m_env->reclaim();
+        }
+        if (m_scheduler)
+        {
+            delete m_scheduler;
+        }
     }
 
     bool RtspServerFilter::initialize(AVCodecContext *encoderCtx)
     {
         m_encoderCtx = encoderCtx;
 
-        OutPacketBuffer::maxSize = 2560 * 1600 * 3;
+        // 降低 live555 默认缓冲区大小，避免 5GB 级别的虚拟内存分配
+        // 1080P H.264 关键帧通常在 500KB-1MB 左右，2MB 足够安全
+        if (OutPacketBuffer::maxSize < 2000000)
+        {
+            OutPacketBuffer::maxSize = 2000000;
+        }
 
         m_scheduler = BasicTaskScheduler::createNew();
         m_env = BasicUsageEnvironment::createNew(*m_scheduler);
@@ -153,8 +171,17 @@ namespace pb
         if (packet->type() != PacketType::AV_PACKET)
             return;
 
+        static int packetLog = 0;
+        if (++packetLog % 60 == 0)
+        {
+            auto pkt = std::static_pointer_cast<AVPacketWrapper>(packet)->get();
+            spdlog::info("[RtspServerFilter] Received packet pts={}, size={}", pkt->pts, pkt->size);
+        }
+
         std::lock_guard<std::mutex> lock(m_queueMutex);
-        if (m_packetQueue.size() > 60)
+        // 严格限制队列深度到 10 帧，约 0.3s 的缓冲。
+        // 超出时直接丢掉最旧的帧，确保内存不爆炸。
+        while (m_packetQueue.size() >= 10)
         {
             m_packetQueue.pop();
         }

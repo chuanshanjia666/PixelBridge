@@ -30,7 +30,9 @@ public:
     QStringList hwTypes() const;
 
     Q_INVOKABLE void startPlay(const QString &url, const QString &hwType);
-    Q_INVOKABLE void startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw);
+    Q_INVOKABLE void startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw, int fps = 30);
+    Q_INVOKABLE void startPush(const QString &input, const QString &output, const QString &encoder, const QString &hw, int fps = 30);
+    Q_INVOKABLE void stopAll();
     Q_INVOKABLE QString urlToPath(const QUrl &url);
 
 signals:
