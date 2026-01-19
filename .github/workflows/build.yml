@@ -35,7 +35,6 @@ jobs:
             qt6-base-dev \
             qt6-declarative-dev \
             qt6-multimedia-dev \
-            qt6-quickcontrols2-dev \
             libgl1-mesa-dev
 
       - name: Configure CMake
