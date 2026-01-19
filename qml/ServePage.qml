@@ -161,6 +161,14 @@ ColumnLayout {
                 editable: true
                 Layout.fillWidth: true
             }
+
+            Label { text: "延迟等级:" }
+            ComboBox {
+                id: latencyLevel
+                model: ["极低 (Ultra-Low)", "平衡 (Low)", "稳定 (Standard)"]
+                currentIndex: 1
+                Layout.fillWidth: true
+            }
         }
     }
 
@@ -172,14 +180,15 @@ ColumnLayout {
         onClicked: {
             let hw = serveHw.currentText === "None" ? "" : serveHw.currentText
             let fps = serveFps.value
+            let lat = latencyLevel.currentIndex
             if (protocolType.currentText === "RTSP Server") {
-                bridge.startServe(serveSource.text, servePort.value, serveName.text, serveEnc.currentText, hw, fps)
+                bridge.startServe(serveSource.text, servePort.value, serveName.text, serveEnc.currentText, hw, fps, lat)
             } else if (protocolType.currentText === "UDP Push") {
-                bridge.startPush(serveSource.text, "udp://" + udpAddress.text + ":" + udpPort.value, serveEnc.currentText, hw, fps)
+                bridge.startPush(serveSource.text, "udp://" + udpAddress.text + ":" + udpPort.value, serveEnc.currentText, hw, fps, lat)
             } else if (protocolType.currentText === "RTP Push") {
-                bridge.startPush(serveSource.text, "rtp://" + rtpAddress.text + ":" + rtpPort.value, serveEnc.currentText, hw, fps)
+                bridge.startPush(serveSource.text, "rtp://" + rtpAddress.text + ":" + rtpPort.value, serveEnc.currentText, hw, fps, lat)
             } else if (protocolType.currentText === "RTSP Push") {
-                bridge.startPush(serveSource.text, rtspPushUrl.text, serveEnc.currentText, hw, fps)
+                bridge.startPush(serveSource.text, rtspPushUrl.text, serveEnc.currentText, hw, fps, lat)
             }
         }
     }

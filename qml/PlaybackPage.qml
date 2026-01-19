@@ -38,6 +38,15 @@ ColumnLayout {
                 Layout.columnSpan: 2
                 Layout.fillWidth: true
             }
+
+            Label { text: "延迟模式:" }
+            ComboBox {
+                id: playLatency
+                model: ["极低 (Ultra-Low)", "平衡 (Low)", "稳定 (Standard)"]
+                currentIndex: 1
+                Layout.columnSpan: 2
+                Layout.fillWidth: true
+            }
         }
     }
 
@@ -48,7 +57,7 @@ ColumnLayout {
         Layout.preferredWidth: 200
         onClicked: {
             let hw = playHw.currentText === "None" ? "" : playHw.currentText
-            bridge.startPlay(playUrl.text, hw)
+            bridge.startPlay(playUrl.text, hw, playLatency.currentIndex)
         }
     }
 

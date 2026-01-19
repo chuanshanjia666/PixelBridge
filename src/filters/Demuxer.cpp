@@ -21,6 +21,27 @@ namespace pb
     {
         AVDictionary *options = nullptr;
 
+        // 根据延迟等级配置参数
+        if (m_latencyLevel == LatencyLevel::UltraLow)
+        {
+            av_dict_set(&options, "probesize", "32000", 0);
+            av_dict_set(&options, "analyzeduration", "50000", 0);
+            av_dict_set(&options, "fflags", "nobuffer", 0);
+            av_dict_set(&options, "flags", "low_delay", 0);
+        }
+        else if (m_latencyLevel == LatencyLevel::Low)
+        {
+            av_dict_set(&options, "probesize", "200000", 0);
+            av_dict_set(&options, "analyzeduration", "500000", 0);
+            av_dict_set(&options, "fflags", "nobuffer", 0);
+        }
+        else
+        {
+            // Standard - 使用较保守的参数，提高复杂流的稳定性
+            av_dict_set(&options, "probesize", "1000000", 0);
+            av_dict_set(&options, "analyzeduration", "1000000", 0);
+        }
+
         // Check if it's a UDP stream and apply specific options
         if (m_url.find("udp://") == 0)
         {
@@ -29,6 +50,13 @@ namespace pb
             av_dict_set(&options, "buffer_size", "1000000", 0);
             av_dict_set(&options, "overrun_nonfatal", "1", 0);
             av_dict_set(&options, "timeout", "5000000", 0); // 5 seconds timeout
+        }
+        else if (m_url.find("rtsp://") == 0)
+        {
+            spdlog::info("Detected RTSP stream, applying low latency options...");
+            // 使用 UDP 传输以获得最小延迟
+            av_dict_set(&options, "rtsp_transport", "udp", 0);
+            av_dict_set(&options, "stimeout", "5000000", 0);
         }
 
         if (avformat_open_input(&m_formatCtx, m_url.c_str(), nullptr, &options) != 0)

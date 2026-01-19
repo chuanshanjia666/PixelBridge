@@ -113,11 +113,38 @@ namespace pb
             spdlog::info("Using software decoding for {}", m_codec->name);
         }
 
-        if (avcodec_open2(m_codecCtx, m_codec, nullptr) < 0)
+        // 根据延迟等级配置解码器
+        if (m_latencyLevel == LatencyLevel::UltraLow)
+        {
+            m_codecCtx->flags |= AV_CODEC_FLAG_LOW_DELAY;
+            m_codecCtx->flags2 |= AV_CODEC_FLAG2_FAST;
+            m_codecCtx->thread_count = 1; // 禁用多线程解码以消除线程间同步延迟
+        }
+        else if (m_latencyLevel == LatencyLevel::Low)
+        {
+            m_codecCtx->flags |= AV_CODEC_FLAG_LOW_DELAY;
+            m_codecCtx->thread_count = 0; // 自动线程数
+        }
+        else
+        {
+            m_codecCtx->thread_count = 0; // 标准模式，优先考虑吞吐量
+        }
+
+        AVDictionary *options = nullptr;
+        if (m_latencyLevel != LatencyLevel::Standard)
+        {
+            av_dict_set(&options, "tune", "zerolatency", 0);
+        }
+
+        if (avcodec_open2(m_codecCtx, m_codec, &options) < 0)
         {
             spdlog::error("Could not open codec");
+            if (options)
+                av_dict_free(&options);
             return false;
         }
+        if (options)
+            av_dict_free(&options);
 
         return true;
     }

@@ -93,16 +93,21 @@ void Bridge::stopAll()
     spdlog::info("All pipeline chains stopped and cleared.");
 }
 
-void Bridge::startPlay(const QString &url, const QString &hwType)
+void Bridge::startPlay(const QString &url, const QString &hwType, int latencyLevel)
 {
     stopAll();
     std::string sUrl = url.toStdString();
     std::string sHw = hwType.toStdString();
-    std::thread([this, sUrl, sHw]()
+    pb::LatencyLevel level = (pb::LatencyLevel)latencyLevel;
+
+    std::thread([this, sUrl, sHw, level]()
                 {
         auto demuxer = std::make_shared<pb::Demuxer>(sUrl);
+        demuxer->setLatencyLevel(level);
         if (!demuxer->initialize()) return;
+
         auto decoder = std::make_shared<pb::VideoDecoder>(demuxer->getVideoCodecParameters(), sHw);
+        decoder->setLatencyLevel(level);
         if (!decoder->initialize()) return;
         
         demuxer->setNextFilter(decoder.get());
@@ -113,39 +118,49 @@ void Bridge::startPlay(const QString &url, const QString &hwType)
             m_chains.push_back({demuxer, decoder});
         }
         
-        spdlog::info("Starting playback to QML: {}", sUrl);
+        spdlog::info("Starting playback (Level: {}) to QML: {}", (int)level, sUrl);
         demuxer->start(); })
         .detach();
 }
 
-void Bridge::startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw, int fps)
+void Bridge::startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw, int fps, int latencyLevel)
 {
     stopAll();
     std::string sSource = source.toStdString();
     std::string sName = name.toStdString();
     std::string sEnc = encoder.toStdString();
     std::string sHw = hw.toStdString();
-    std::thread([this, sSource, port, sName, sEnc, sHw, fps]()
+    pb::LatencyLevel level = (pb::LatencyLevel)latencyLevel;
+
+    std::thread([this, sSource, port, sName, sEnc, sHw, fps, level]()
                 {
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
         if (sSource.find("screen") == 0) {
             std::string display = (sSource.find(":") != std::string::npos) ? sSource.substr(sSource.find(":") + 1) : ":1";
             auto capture = std::make_shared<pb::ScreenCapture>(display, fps);
+            capture->setLatencyLevel(level);
             if (!capture->initialize()) return;
             params = capture->getCodecParameters();
             src = capture;
         } else {
             auto demuxer = std::make_shared<pb::Demuxer>(sSource);
+            demuxer->setLatencyLevel(level);
             if (!demuxer->initialize()) return;
             params = demuxer->getVideoCodecParameters();
             src = demuxer;
         }
+
         auto decoder = std::make_shared<pb::VideoDecoder>(params, sHw);
+        decoder->setLatencyLevel(level);
         if (!decoder->initialize()) return;
+
         auto enc = std::make_shared<pb::VideoEncoder>(sEnc, sHw);
+        enc->setLatencyLevel(level);
         if (!enc->initialize(params->width, params->height, fps)) return;
+
         auto server = std::make_shared<pb::RtspServerFilter>(port, sName);
+        server->setLatencyLevel(level);
         if (!server->initialize(enc->getCodecContext())) return;
         
         auto tee = std::make_shared<pb::TeeFilter>();
@@ -161,39 +176,49 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
             m_chains.push_back({src, decoder, enc, server, tee});
         }
         
-        spdlog::info("Starting RTSP server: rtsp://localhost:{}/{}", port, sName);
+        spdlog::info("Starting RTSP server (Level: {}): rtsp://localhost:{}/{}", (int)level, port, sName);
         src->start(); })
         .detach();
 }
 
-void Bridge::startPush(const QString &input, const QString &output, const QString &encoder, const QString &hw, int fps)
+void Bridge::startPush(const QString &input, const QString &output, const QString &encoder, const QString &hw, int fps, int latencyLevel)
 {
     stopAll();
     std::string sInput = input.toStdString();
     std::string sOutput = output.toStdString();
     std::string sEnc = encoder.toStdString();
     std::string sHw = hw.toStdString();
-    std::thread([this, sInput, sOutput, sEnc, sHw, fps]()
+    pb::LatencyLevel level = (pb::LatencyLevel)latencyLevel;
+
+    std::thread([this, sInput, sOutput, sEnc, sHw, fps, level]()
                 {
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
         if (sInput.find("screen") == 0) {
             std::string display = (sInput.find(":") != std::string::npos) ? sInput.substr(sInput.find(":") + 1) : ":1";
             auto capture = std::make_shared<pb::ScreenCapture>(display, fps);
+            capture->setLatencyLevel(level);
             if (!capture->initialize()) return;
             params = capture->getCodecParameters();
             src = capture;
         } else {
             auto demuxer = std::make_shared<pb::Demuxer>(sInput);
+            demuxer->setLatencyLevel(level);
             if (!demuxer->initialize()) return;
             params = demuxer->getVideoCodecParameters();
             src = demuxer;
         }
+
         auto decoder = std::make_shared<pb::VideoDecoder>(params, sHw);
+        decoder->setLatencyLevel(level);
         if (!decoder->initialize()) return;
+
         auto enc = std::make_shared<pb::VideoEncoder>(sEnc, sHw);
+        enc->setLatencyLevel(level);
         if (!enc->initialize(params->width, params->height, fps)) return;
+
         auto muxer = std::make_shared<pb::Muxer>(sOutput);
+        muxer->setLatencyLevel(level);
         if (!muxer->initialize(enc->getCodecContext())) return;
         
         auto tee = std::make_shared<pb::TeeFilter>();
@@ -209,7 +234,7 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
             m_chains.push_back({src, decoder, enc, muxer, tee});
         }
         
-        spdlog::info("Starting push and QML preview: {} -> {}", sInput, sOutput);
+        spdlog::info("Starting push (Level: {}) and QML preview: {} -> {}", (int)level, sInput, sOutput);
         src->start(); })
         .detach();
 }

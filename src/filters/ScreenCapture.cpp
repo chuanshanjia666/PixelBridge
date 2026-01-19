@@ -219,7 +219,8 @@ namespace pb
 
         {
             std::lock_guard<std::mutex> lock(m_queueMutex);
-            while (m_frameQueue.size() >= 1)
+            int maxQueueSize = (m_latencyLevel == LatencyLevel::Standard) ? 3 : 1;
+            while (m_frameQueue.size() >= maxQueueSize)
             {
                 m_frameQueue.pop();
             }
@@ -286,9 +287,11 @@ namespace pb
             {
                 if (swsCtx)
                     sws_freeContext(swsCtx);
+
+                int flags = (m_latencyLevel == LatencyLevel::Standard) ? SWS_BILINEAR : SWS_FAST_BILINEAR;
                 swsCtx = sws_getContext(w, h, inFmt,
                                         w, h, AV_PIX_FMT_NV12,
-                                        SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+                                        flags, nullptr, nullptr, nullptr);
 
                 // 设置颜色空间细节，处理 Full Range RGB -> Limited Range YUV 的转换
                 // 强制指定：源是 Full Range (1), 目标是 Limited Range (0)

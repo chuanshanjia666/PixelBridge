@@ -53,10 +53,26 @@ namespace pb
             spdlog::info("RTSP muxer configured with TCP transport");
         }
 
-        // 通用的极致低延迟配置
-        av_dict_set(&options, "buffer_size", "1024", 0);
-        av_dict_set(&options, "flush_packets", "1", 0);
-        av_dict_set(&options, "tune", "zerolatency", 0);
+        // 根据延迟等级配置
+        if (m_latencyLevel == LatencyLevel::UltraLow)
+        {
+            av_dict_set(&options, "buffer_size", "1024", 0);
+            av_dict_set(&options, "flush_packets", "1", 0);
+        }
+        else if (m_latencyLevel == LatencyLevel::Low)
+        {
+            av_dict_set(&options, "buffer_size", "65536", 0);
+            av_dict_set(&options, "flush_packets", "1", 0);
+        }
+        else
+        {
+            // Standard - 使用系统默认缓冲，提高网络抗抖动能力
+        }
+
+        if (m_latencyLevel != LatencyLevel::Standard)
+        {
+            av_dict_set(&options, "tune", "zerolatency", 0);
+        }
 
         m_outStream = avformat_new_stream(m_formatCtx, nullptr);
         if (!m_outStream)

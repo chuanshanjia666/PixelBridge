@@ -96,11 +96,22 @@ namespace pb
         m_codecCtx->height = height;
         m_codecCtx->time_base = {1, fps};
         m_codecCtx->framerate = {fps, 1};
-        m_codecCtx->bit_rate = 4000000; // 4 Mbps 默认带宽限制，防止 UDP 爆表
-        m_codecCtx->rc_max_rate = 4000000;
-        m_codecCtx->rc_buffer_size = 8000000;
-        m_codecCtx->gop_size = 30;
-        m_codecCtx->max_b_frames = 0; // 彻底禁用 B 帧，解决 RTSP 解码 POC 错误
+
+        // 码率控制：标准模式允许更高质量
+        if (m_latencyLevel == LatencyLevel::Standard)
+        {
+            m_codecCtx->bit_rate = 8000000; // 8 Mbps
+            m_codecCtx->gop_size = 60;
+        }
+        else
+        {
+            m_codecCtx->bit_rate = 4000000; // 4 Mbps
+            m_codecCtx->gop_size = (m_latencyLevel == LatencyLevel::UltraLow) ? 10 : 30;
+        }
+
+        m_codecCtx->rc_max_rate = m_codecCtx->bit_rate;
+        m_codecCtx->rc_buffer_size = m_codecCtx->bit_rate * 2;
+        m_codecCtx->max_b_frames = 0; // 始终禁用 B 帧以保持低延迟
 
         if (!m_hwTypeName.empty())
         {
@@ -126,20 +137,41 @@ namespace pb
         AVDictionary *options = nullptr;
         if (m_codecName == "libx264")
         {
-            // ultrafast is preferred for real-time screen capture to minimize CPU usage
-            av_dict_set(&options, "preset", "ultrafast", 0);
-            av_dict_set(&options, "tune", "zerolatency", 0);
-            // 强制开启重复头
+            if (m_latencyLevel == LatencyLevel::UltraLow)
+            {
+                av_dict_set(&options, "preset", "ultrafast", 0);
+                av_dict_set(&options, "tune", "zerolatency", 0);
+            }
+            else if (m_latencyLevel == LatencyLevel::Low)
+            {
+                av_dict_set(&options, "preset", "superfast", 0);
+                av_dict_set(&options, "tune", "zerolatency", 0);
+            }
+            else
+            {
+                av_dict_set(&options, "preset", "medium", 0);
+            }
             av_dict_set(&options, "x264-params", "repeat-headers=1:nal-hrd=cbr:force-cfr=1", 0);
         }
         else if (m_codecName.find("nvenc") != std::string::npos)
         {
-            // NVENC 极致低延迟配置
-            av_dict_set(&options, "preset", "p1", 0); // 最快速度
-            av_dict_set(&options, "tune", "ull", 0);  // Ultra-low latency
-            av_dict_set(&options, "rc", "cbr", 0);    // 恒定码率
-            av_dict_set(&options, "zerolatency", "1", 0);
-            av_dict_set(&options, "delay", "0", 0); // 禁用内部缓冲
+            if (m_latencyLevel == LatencyLevel::UltraLow)
+            {
+                av_dict_set(&options, "preset", "p1", 0);
+                av_dict_set(&options, "tune", "ull", 0);
+                av_dict_set(&options, "delay", "0", 0);
+                av_dict_set(&options, "zerolatency", "1", 0);
+            }
+            else if (m_latencyLevel == LatencyLevel::Low)
+            {
+                av_dict_set(&options, "preset", "p2", 0);
+                av_dict_set(&options, "tune", "ll", 0);
+            }
+            else
+            {
+                av_dict_set(&options, "preset", "p4", 0);
+            }
+            av_dict_set(&options, "rc", "cbr", 0);
             av_dict_set(&options, "forced-idr", "1", 0);
             av_dict_set(&options, "repeat_headers", "1", 0);
         }
