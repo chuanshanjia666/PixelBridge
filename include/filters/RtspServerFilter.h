@@ -16,7 +16,7 @@ namespace pb
     class RtspServerFilter : public Filter
     {
     public:
-        RtspServerFilter(int port = 8554, const std::string &streamName = "live");
+        RtspServerFilter(int port = 8554, const std::string &streamName = "live", const std::string &address = "");
         ~RtspServerFilter();
 
         bool initialize(AVCodecContext *encoderCtx);
@@ -30,6 +30,7 @@ namespace pb
 
         int m_port;
         std::string m_streamName;
+        std::string m_address;
         std::thread m_serverThread;
         std::atomic<bool> m_running{false};
 

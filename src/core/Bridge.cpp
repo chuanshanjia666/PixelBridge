@@ -47,7 +47,8 @@ Bridge::Bridge(QObject *parent) : QObject(parent)
 
 Bridge::~Bridge()
 {
-    // Basic cleanup
+    stopAll();
+    delete m_qmlSink;
 }
 
 QVideoSink *Bridge::videoSink() const
@@ -59,6 +60,8 @@ void Bridge::setVideoSink(QVideoSink *sink)
 {
     if (m_qmlSink->videoSink() != sink)
     {
+        // Use a lock to prevent the pipeline from writing to the sink while it's being swapped
+        std::lock_guard<std::mutex> lock(m_chainMutex);
         m_qmlSink->setVideoSink(sink);
         emit videoSinkChanged();
     }
@@ -147,17 +150,33 @@ QStringList Bridge::getEncoders(const QString &codecType, const QString &hwType)
 void Bridge::stopAll()
 {
     std::lock_guard<std::mutex> lock(m_chainMutex);
+
+    // Reverse order stop: Source filters first to stop data flow, then others
     for (auto &chain : m_chains)
     {
-        if (!chain.empty() && chain[0])
+        if (!chain.empty())
         {
-            chain[0]->stop(); // 停止源头（如 ScreenCapture 线程）
-        }
-        for (auto &filter : chain)
-        {
-            filter->stop();
+            // Stop source first
+            chain[0]->stop();
         }
     }
+
+    for (auto &chain : m_chains)
+    {
+        // Stop the rest of filters in reverse order (Muxer/Server last to flush trailers/close)
+        for (auto it = chain.rbegin(); it != chain.rend(); ++it)
+        {
+            if (it == chain.rbegin() && !chain.empty() && chain.size() > 1)
+            {
+                // If it's the source we already stopped it, but calling stop again is safe
+                // for most of our filters. However, we should stop them in data-flow order
+                // or reverse data-flow order depending on logic.
+                // Usually reverse order is better for resource cleanup.
+            }
+            (*it)->stop();
+        }
+    }
+
     m_chains.clear();
     spdlog::info("All pipeline chains stopped and cleared.");
 }
@@ -192,16 +211,17 @@ void Bridge::startPlay(const QString &url, const QString &hwType, int latencyLev
         .detach();
 }
 
-void Bridge::startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw, int fps, int latencyLevel, bool echo)
+void Bridge::startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw, int fps, int latencyLevel, bool echo, const QString &address)
 {
     stopAll();
     std::string sSource = source.toStdString();
     std::string sName = name.toStdString();
     std::string sEnc = encoder.toStdString();
     std::string sHw = hw.toStdString();
+    std::string sAddr = address.toStdString();
     pb::LatencyLevel level = (pb::LatencyLevel)latencyLevel;
 
-    std::thread([this, sSource, port, sName, sEnc, sHw, fps, level, echo]()
+    std::thread([this, sSource, port, sName, sEnc, sHw, fps, level, echo, sAddr]()
                 {
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
@@ -228,7 +248,7 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
         enc->setLatencyLevel(level);
         if (!enc->initialize(params->width, params->height, fps)) return;
 
-        auto server = std::make_shared<pb::RtspServerFilter>(port, sName);
+        auto server = std::make_shared<pb::RtspServerFilter>(port, sName, sAddr);
         server->setLatencyLevel(level);
         if (!server->initialize(enc->getCodecContext())) return;
         
@@ -251,7 +271,7 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
             m_chains.push_back(filters);
         }
         
-        spdlog::info("Starting RTSP server (Level: {}, Echo: {}): rtsp://localhost:{}/{}", (int)level, echo, port, sName);
+        spdlog::info("Starting RTSP server (Level: {}, Echo: {}): rtsp://{}:{}/{}", (int)level, echo, sAddr.empty() ? "localhost" : sAddr, port, sName);
         src->start(); })
         .detach();
 }

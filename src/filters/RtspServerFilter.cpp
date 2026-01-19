@@ -4,6 +4,7 @@
 #include <H264VideoRTPSink.hh>
 #include <H264VideoStreamFramer.hh>
 #include <Base64.hh>
+#include <GroupsockHelper.hh>
 
 namespace pb
 {
@@ -107,8 +108,8 @@ namespace pb
         AVCodecContext *m_encoderCtx;
     };
 
-    RtspServerFilter::RtspServerFilter(int port, const std::string &streamName)
-        : Filter("RtspServerFilter"), m_port(port), m_streamName(streamName)
+    RtspServerFilter::RtspServerFilter(int port, const std::string &streamName, const std::string &address)
+        : Filter("RtspServerFilter"), m_port(port), m_streamName(streamName), m_address(address)
     {
     }
 
@@ -145,6 +146,12 @@ namespace pb
         m_scheduler = BasicTaskScheduler::createNew();
         m_env = BasicUsageEnvironment::createNew(*m_scheduler);
 
+        if (!m_address.empty())
+        {
+            ReceivingInterfaceAddr = inet_addr(m_address.c_str());
+            spdlog::info("RTSP Server binding to interface: {}", m_address);
+        }
+
         m_rtspServer = RTSPServer::createNew(*m_env, m_port);
         if (!m_rtspServer)
         {
@@ -168,7 +175,7 @@ namespace pb
 
     void RtspServerFilter::process(DataPacket::Ptr packet)
     {
-        if (packet->type() != PacketType::AV_PACKET)
+        if (!m_running || packet->type() != PacketType::AV_PACKET)
             return;
 
         static int packetLog = 0;

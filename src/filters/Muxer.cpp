@@ -138,7 +138,7 @@ namespace pb
 
     void Muxer::stop()
     {
-        if (m_formatCtx)
+        if (m_formatCtx && m_formatCtx->pb)
         {
             av_write_trailer(m_formatCtx);
         }

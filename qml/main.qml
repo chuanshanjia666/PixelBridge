@@ -6,27 +6,139 @@ import QtMultimedia
 ApplicationWindow {
     id: window
     visible: true
-    width: 800
-    height: 600
-    title: qsTr("PixelBridge Multi-Tool")
+    width: 1100
+    height: 750
+    title: qsTr("PixelBridge")
 
-    header: TabBar {
-        id: bar
-        width: parent.width
-        TabButton { text: qsTr("播放 (Receive)") }
-        TabButton { text: qsTr("服务 (Serve/Push)") }
+    readonly property color colorPrimary: "#0078D4"
+    readonly property color colorBg: "#0B0B0B"
+    readonly property color colorSurface: "#161616"
+    readonly property color colorText: "#E0E0E0"
+    readonly property color colorSecondary: "#888888"
+
+    palette.window: colorBg
+    palette.windowText: colorText
+    palette.base: colorSurface
+    palette.text: colorText
+    palette.button: colorSurface
+    palette.buttonText: colorText
+    palette.placeholderText: colorSecondary
+
+    function switchToDisplay() { sideNav.currentIndex = 0 }
+    function switchToSettings() { sideNav.currentIndex = 1 }
+
+    background: Rectangle {
+        color: window.colorBg
     }
 
-    StackLayout {
+    RowLayout {
         anchors.fill: parent
-        currentIndex: bar.currentIndex
+        spacing: 0
 
-        PlaybackPage {
-            id: playbackPage
+        // Sidebar
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.preferredWidth: 220
+            color: window.colorSurface
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                Rectangle {
+                    Layout.preferredHeight: 100
+                    Layout.fillWidth: true
+                    color: "transparent"
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        spacing: 4
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "PIXEL"
+                            color: window.colorPrimary
+                            font.pixelSize: 26
+                            font.bold: true
+                            font.letterSpacing: 2
+                        }
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "BRIDGE"
+                            color: window.colorText
+                            font.pixelSize: 14
+                            font.weight: Font.Light
+                            font.letterSpacing: 4
+                        }
+                    }
+                }
+
+                ListView {
+                    id: sideNav
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+                    model: ListModel {
+                        ListElement { name: qsTr("监控画面"); icon: "🖥️" }
+                        ListElement { name: qsTr("配置中心"); icon: "⚙️" }
+                    }
+                    delegate: ItemDelegate {
+                        width: parent.width
+                        height: 60
+                        padding: 20
+                        highlighted: sideNav.currentIndex === index
+                        
+                        background: Rectangle {
+                            color: highlighted ? Qt.rgba(0, 120/255, 212/255, 0.15) : "transparent"
+                            Rectangle {
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                height: parent.height * 0.5
+                                width: 3
+                                color: window.colorPrimary
+                                visible: highlighted
+                            }
+                        }
+
+                        contentItem: RowLayout {
+                            spacing: 15
+                            Text {
+                                text: model.icon
+                                font.pixelSize: 20
+                                color: highlighted ? window.colorText : window.colorSecondary
+                            }
+                            Text {
+                                text: model.name
+                                color: highlighted ? window.colorText : window.colorSecondary
+                                font.pixelSize: 15
+                                font.bold: highlighted
+                            }
+                        }
+                        onClicked: sideNav.currentIndex = index
+                    }
+                }
+
+                Text {
+                    Layout.margins: 20
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "© 2026 PixelBridge"
+                    color: "#333"
+                    font.pixelSize: 10
+                }
+            }
         }
 
-        ServePage {
-            id: servePage
+        // Main Content
+        StackLayout {
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            currentIndex: sideNav.currentIndex
+
+            DisplayPage {
+                id: displayPage
+                Layout.margins: 20
+            }
+
+            SettingsPage {
+                id: settingsPage
+            }
         }
     }
 }

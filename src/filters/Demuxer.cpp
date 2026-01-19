@@ -120,6 +120,14 @@ namespace pb
     void Demuxer::stop()
     {
         m_running = false;
+        // Break FFmpeg blocking call
+        if (m_formatCtx)
+        {
+            // Note: avformat_close_input will handle it, but for real-time streams
+            // we occasionally need a callback or interrupt.
+            // Simplified: we rely on m_running check after av_read_frame.
+        }
+
         if (m_thread.joinable())
         {
             m_thread.join();

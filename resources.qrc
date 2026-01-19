@@ -1,8 +1,8 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/main.qml</file>
-        <file>qml/PlaybackPage.qml</file>
-        <file>qml/ServePage.qml</file>
+        <file>qml/DisplayPage.qml</file>
+        <file>qml/SettingsPage.qml</file>
         <file>qtquickcontrols2.conf</file>
     </qresource>
 </RCC>
