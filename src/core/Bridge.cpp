@@ -11,6 +11,7 @@
 extern "C"
 {
 #include <libavutil/hwcontext.h>
+#include <libavcodec/avcodec.h>
 }
 namespace pb
 {
@@ -75,6 +76,74 @@ QStringList Bridge::hwTypes() const
     return types;
 }
 
+QStringList Bridge::getEncoders(const QString &codecType, const QString &hwType)
+{
+    QStringList encoders;
+    AVCodecID targetId = AV_CODEC_ID_NONE;
+    if (codecType == "H.264")
+        targetId = AV_CODEC_ID_H264;
+    else if (codecType == "H.265")
+        targetId = AV_CODEC_ID_HEVC;
+    else if (codecType == "MJPEG")
+        targetId = AV_CODEC_ID_MJPEG;
+    else if (codecType == "AV1")
+        targetId = AV_CODEC_ID_AV1;
+
+    if (targetId == AV_CODEC_ID_NONE)
+        return encoders;
+
+    const AVCodec *codec = nullptr;
+    void *opaque = nullptr;
+    while ((codec = av_codec_iterate(&opaque)))
+    {
+        if (!av_codec_is_encoder(codec) || codec->id != targetId)
+            continue;
+
+        QString name = QString::fromUtf8(codec->name);
+
+        if (hwType == "None")
+        {
+            // Show software encoders (usually don't have these suffixes)
+            if (!name.contains("_nvenc") && !name.contains("_vaapi") &&
+                !name.contains("_qsv") && !name.contains("_amf") &&
+                !name.contains("_v4l2m2m") && !name.contains("_videotoolbox"))
+            {
+                encoders << name;
+            }
+        }
+        else
+        {
+            // Find hardware matched encoders
+            QString hwLower = hwType.toLower();
+            bool match = false;
+            if (hwLower == "cuda" && name.contains("nvenc"))
+                match = true;
+            else if (name.contains(hwLower))
+                match = true;
+
+            if (match)
+            {
+                encoders << name;
+            }
+        }
+    }
+    encoders.sort();
+    if (hwType == "None")
+    {
+        if (codecType == "H.264" && encoders.contains("libx264"))
+        {
+            encoders.removeAll("libx264");
+            encoders.prepend("libx264");
+        }
+        else if (codecType == "H.265" && encoders.contains("libx265"))
+        {
+            encoders.removeAll("libx265");
+            encoders.prepend("libx265");
+        }
+    }
+    return encoders;
+}
+
 void Bridge::stopAll()
 {
     std::lock_guard<std::mutex> lock(m_chainMutex);
@@ -123,7 +192,7 @@ void Bridge::startPlay(const QString &url, const QString &hwType, int latencyLev
         .detach();
 }
 
-void Bridge::startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw, int fps, int latencyLevel)
+void Bridge::startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw, int fps, int latencyLevel, bool echo)
 {
     stopAll();
     std::string sSource = source.toStdString();
@@ -132,7 +201,7 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
     std::string sHw = hw.toStdString();
     pb::LatencyLevel level = (pb::LatencyLevel)latencyLevel;
 
-    std::thread([this, sSource, port, sName, sEnc, sHw, fps, level]()
+    std::thread([this, sSource, port, sName, sEnc, sHw, fps, level, echo]()
                 {
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
@@ -163,25 +232,31 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
         server->setLatencyLevel(level);
         if (!server->initialize(enc->getCodecContext())) return;
         
-        auto tee = std::make_shared<pb::TeeFilter>();
-        tee->addTarget(enc.get());
-        tee->addTarget(m_qmlSink);
-
         src->setNextFilter(decoder.get());
-        decoder->setNextFilter(tee.get());
+        std::vector<std::shared_ptr<pb::Filter>> filters = {src, decoder, enc, server};
+
+        if (echo) {
+            auto tee = std::make_shared<pb::TeeFilter>();
+            tee->addTarget(enc.get());
+            tee->addTarget(m_qmlSink);
+            decoder->setNextFilter(tee.get());
+            filters.push_back(tee);
+        } else {
+            decoder->setNextFilter(enc.get());
+        }
         enc->setNextFilter(server.get());
         
         {
             std::lock_guard<std::mutex> lock(m_chainMutex);
-            m_chains.push_back({src, decoder, enc, server, tee});
+            m_chains.push_back(filters);
         }
         
-        spdlog::info("Starting RTSP server (Level: {}): rtsp://localhost:{}/{}", (int)level, port, sName);
+        spdlog::info("Starting RTSP server (Level: {}, Echo: {}): rtsp://localhost:{}/{}", (int)level, echo, port, sName);
         src->start(); })
         .detach();
 }
 
-void Bridge::startPush(const QString &input, const QString &output, const QString &encoder, const QString &hw, int fps, int latencyLevel)
+void Bridge::startPush(const QString &input, const QString &output, const QString &encoder, const QString &hw, int fps, int latencyLevel, bool echo)
 {
     stopAll();
     std::string sInput = input.toStdString();
@@ -190,7 +265,7 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
     std::string sHw = hw.toStdString();
     pb::LatencyLevel level = (pb::LatencyLevel)latencyLevel;
 
-    std::thread([this, sInput, sOutput, sEnc, sHw, fps, level]()
+    std::thread([this, sInput, sOutput, sEnc, sHw, fps, level, echo]()
                 {
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
@@ -221,20 +296,26 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
         muxer->setLatencyLevel(level);
         if (!muxer->initialize(enc->getCodecContext())) return;
         
-        auto tee = std::make_shared<pb::TeeFilter>();
-        tee->addTarget(enc.get());
-        tee->addTarget(m_qmlSink);
-
         src->setNextFilter(decoder.get());
-        decoder->setNextFilter(tee.get());
+        std::vector<std::shared_ptr<pb::Filter>> filters = {src, decoder, enc, muxer};
+
+        if (echo) {
+            auto tee = std::make_shared<pb::TeeFilter>();
+            tee->addTarget(enc.get());
+            tee->addTarget(m_qmlSink);
+            decoder->setNextFilter(tee.get());
+            filters.push_back(tee);
+        } else {
+            decoder->setNextFilter(enc.get());
+        }
         enc->setNextFilter(muxer.get());
         
         {
             std::lock_guard<std::mutex> lock(m_chainMutex);
-            m_chains.push_back({src, decoder, enc, muxer, tee});
+            m_chains.push_back(filters);
         }
         
-        spdlog::info("Starting push (Level: {}) and QML preview: {} -> {}", (int)level, sInput, sOutput);
+        spdlog::info("Starting push (Level: {}, Echo: {}): {} -> {}", (int)level, echo, sInput, sOutput);
         src->start(); })
         .detach();
 }

@@ -140,17 +140,25 @@ ColumnLayout {
             columns: 4
             anchors.fill: parent
             
-            Label { text: "编码器:" }
+            Label { text: "编码方式:" }
             ComboBox {
-                id: serveEnc
-                model: ["libx264", "h264_nvenc", "h264_vaapi"]
+                id: codecSelect
+                model: ["H.264", "H.265", "MJPEG", "AV1"]
                 Layout.fillWidth: true
+                currentIndex: 0
             }
-            
+
             Label { text: "硬件框架:" }
             ComboBox {
                 id: serveHw
                 model: bridge.hwTypes
+                Layout.fillWidth: true
+            }
+
+            Label { text: "具体编码器:" }
+            ComboBox {
+                id: serveEnc
+                model: bridge.getEncoders(codecSelect.currentText, serveHw.currentText)
                 Layout.fillWidth: true
             }
 
@@ -169,6 +177,13 @@ ColumnLayout {
                 currentIndex: 1
                 Layout.fillWidth: true
             }
+
+            CheckBox {
+                id: echoEnable
+                text: "开启回显 (本地预览)"
+                checked: true
+                Layout.columnSpan: 2
+            }
         }
     }
 
@@ -181,14 +196,15 @@ ColumnLayout {
             let hw = serveHw.currentText === "None" ? "" : serveHw.currentText
             let fps = serveFps.value
             let lat = latencyLevel.currentIndex
+            let echo = echoEnable.checked
             if (protocolType.currentText === "RTSP Server") {
-                bridge.startServe(serveSource.text, servePort.value, serveName.text, serveEnc.currentText, hw, fps, lat)
+                bridge.startServe(serveSource.text, servePort.value, serveName.text, serveEnc.currentText, hw, fps, lat, echo)
             } else if (protocolType.currentText === "UDP Push") {
-                bridge.startPush(serveSource.text, "udp://" + udpAddress.text + ":" + udpPort.value, serveEnc.currentText, hw, fps, lat)
+                bridge.startPush(serveSource.text, "udp://" + udpAddress.text + ":" + udpPort.value, serveEnc.currentText, hw, fps, lat, echo)
             } else if (protocolType.currentText === "RTP Push") {
-                bridge.startPush(serveSource.text, "rtp://" + rtpAddress.text + ":" + rtpPort.value, serveEnc.currentText, hw, fps, lat)
+                bridge.startPush(serveSource.text, "rtp://" + rtpAddress.text + ":" + rtpPort.value, serveEnc.currentText, hw, fps, lat, echo)
             } else if (protocolType.currentText === "RTSP Push") {
-                bridge.startPush(serveSource.text, rtspPushUrl.text, serveEnc.currentText, hw, fps, lat)
+                bridge.startPush(serveSource.text, rtspPushUrl.text, serveEnc.currentText, hw, fps, lat, echo)
             }
         }
     }
