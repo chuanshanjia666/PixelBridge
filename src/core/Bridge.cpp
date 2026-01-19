@@ -47,8 +47,11 @@ Bridge::Bridge(QObject *parent) : QObject(parent)
 
 Bridge::~Bridge()
 {
+    spdlog::info("Bridge destructor started");
     stopAll();
+    spdlog::info("Bridge chains stopped, deleting QML sink");
     delete m_qmlSink;
+    spdlog::info("Bridge destructor finished");
 }
 
 QVideoSink *Bridge::videoSink() const
@@ -149,36 +152,43 @@ QStringList Bridge::getEncoders(const QString &codecType, const QString &hwType)
 
 void Bridge::stopAll()
 {
+    spdlog::info("stopAll() called, acquiring lock...");
+    spdlog::default_logger()->flush();
+
     std::lock_guard<std::mutex> lock(m_chainMutex);
+    spdlog::info("stopAll() lock acquired, stopping {} chains", m_chains.size());
+    spdlog::default_logger()->flush();
 
     // Reverse order stop: Source filters first to stop data flow, then others
-    for (auto &chain : m_chains)
+    for (size_t i = 0; i < m_chains.size(); ++i)
     {
+        auto &chain = m_chains[i];
         if (!chain.empty())
         {
+            spdlog::info("Stopping source for chain {}", i);
+            spdlog::default_logger()->flush();
             // Stop source first
             chain[0]->stop();
         }
     }
 
-    for (auto &chain : m_chains)
+    for (size_t i = 0; i < m_chains.size(); ++i)
     {
+        auto &chain = m_chains[i];
+        spdlog::info("Stopping remaining filters for chain {}", i);
+        spdlog::default_logger()->flush();
         // Stop the rest of filters in reverse order (Muxer/Server last to flush trailers/close)
         for (auto it = chain.rbegin(); it != chain.rend(); ++it)
         {
-            if (it == chain.rbegin() && !chain.empty() && chain.size() > 1)
-            {
-                // If it's the source we already stopped it, but calling stop again is safe
-                // for most of our filters. However, we should stop them in data-flow order
-                // or reverse data-flow order depending on logic.
-                // Usually reverse order is better for resource cleanup.
-            }
+            spdlog::info("Stopping filter: {}", (*it)->name());
+            spdlog::default_logger()->flush();
             (*it)->stop();
         }
     }
 
     m_chains.clear();
     spdlog::info("All pipeline chains stopped and cleared.");
+    spdlog::default_logger()->flush();
 }
 
 void Bridge::startPlay(const QString &url, const QString &hwType, int latencyLevel)

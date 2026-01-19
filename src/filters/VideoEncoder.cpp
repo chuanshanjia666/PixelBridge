@@ -14,23 +14,35 @@ namespace pb
 
     VideoEncoder::~VideoEncoder()
     {
+        spdlog::info("[VideoEncoder] Destructor started");
+        spdlog::default_logger()->flush();
         stop();
         if (m_swsContext)
         {
+            spdlog::info("[VideoEncoder] Freeing sws context");
+            spdlog::default_logger()->flush();
             sws_freeContext(m_swsContext);
         }
         if (m_codecCtx)
         {
+            spdlog::info("[VideoEncoder] Freeing codec context");
+            spdlog::default_logger()->flush();
             avcodec_free_context(&m_codecCtx);
         }
         if (m_hwFramesCtx)
         {
+            spdlog::info("[VideoEncoder] Unreffing HW frames context");
+            spdlog::default_logger()->flush();
             av_buffer_unref(&m_hwFramesCtx);
         }
         if (m_hwDeviceCtx)
         {
+            spdlog::info("[VideoEncoder] Unreffing HW device context");
+            spdlog::default_logger()->flush();
             av_buffer_unref(&m_hwDeviceCtx);
         }
+        spdlog::info("[VideoEncoder] Destructor finished");
+        spdlog::default_logger()->flush();
     }
 
     bool VideoEncoder::init_hw_encoder()

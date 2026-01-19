@@ -10,11 +10,19 @@ namespace pb
 
     Demuxer::~Demuxer()
     {
+        spdlog::info("[Demuxer] Destructor started");
+        spdlog::default_logger()->flush();
         stop();
         if (m_formatCtx)
         {
+            spdlog::info("[Demuxer] Closing format context...");
+            spdlog::default_logger()->flush();
             avformat_close_input(&m_formatCtx);
+            spdlog::info("[Demuxer] Format context closed.");
+            spdlog::default_logger()->flush();
         }
+        spdlog::info("[Demuxer] Destructor finished");
+        spdlog::default_logger()->flush();
     }
 
     bool Demuxer::initialize()
@@ -119,6 +127,7 @@ namespace pb
 
     void Demuxer::stop()
     {
+        spdlog::info("[Demuxer] stop() called for {}", m_url);
         m_running = false;
         // Break FFmpeg blocking call
         if (m_formatCtx)
@@ -130,7 +139,9 @@ namespace pb
 
         if (m_thread.joinable())
         {
+            spdlog::info("[Demuxer] Joining thread for {}", m_url);
             m_thread.join();
+            spdlog::info("[Demuxer] Thread joined for {}", m_url);
         }
     }
 

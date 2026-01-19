@@ -8,15 +8,23 @@ namespace pb
 
     Muxer::~Muxer()
     {
+        spdlog::info("[Muxer] Destructor started");
+        spdlog::default_logger()->flush();
         stop();
         if (m_formatCtx)
         {
             if (!(m_formatCtx->oformat->flags & AVFMT_NOFILE))
             {
+                spdlog::info("[Muxer] Closing IO");
+                spdlog::default_logger()->flush();
                 avio_closep(&m_formatCtx->pb);
             }
+            spdlog::info("[Muxer] Freeing format context");
+            spdlog::default_logger()->flush();
             avformat_free_context(m_formatCtx);
         }
+        spdlog::info("[Muxer] Destructor finished");
+        spdlog::default_logger()->flush();
     }
 
     bool Muxer::initialize(AVCodecContext *encoderCtx)
@@ -105,6 +113,7 @@ namespace pb
                 av_dict_free(&options);
             return false;
         }
+        m_headerWritten = true;
 
         if (options)
             av_dict_free(&options);
@@ -138,9 +147,11 @@ namespace pb
 
     void Muxer::stop()
     {
-        if (m_formatCtx && m_formatCtx->pb)
+        if (m_formatCtx && m_headerWritten && !m_trailerWritten)
         {
+            spdlog::info("[Muxer] Writing trailer for {}", m_url);
             av_write_trailer(m_formatCtx);
+            m_trailerWritten = true;
         }
     }
 

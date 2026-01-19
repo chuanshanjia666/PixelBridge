@@ -24,6 +24,8 @@ namespace pb
         AVFormatContext *m_formatCtx = nullptr;
         AVStream *m_outStream = nullptr;
         AVRational m_srcTimeBase = {1, 30};
+        bool m_headerWritten = false;
+        bool m_trailerWritten = false;
     };
 
 } // namespace pb

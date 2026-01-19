@@ -8,17 +8,36 @@ namespace pb
 
     QmlVideoSinkFilter::~QmlVideoSinkFilter()
     {
+        spdlog::info("[QmlVideoSinkFilter] Destructor started");
+        spdlog::default_logger()->flush();
+
         if (m_swsContext)
         {
+            spdlog::info("[QmlVideoSinkFilter] Freeing sws context");
+            spdlog::default_logger()->flush();
             sws_freeContext(m_swsContext);
+            m_swsContext = nullptr;
         }
+        spdlog::info("[QmlVideoSinkFilter] Destructor finished");
+        spdlog::default_logger()->flush();
     }
 
     void QmlVideoSinkFilter::setVideoSink(QVideoSink *sink)
     {
         if (m_videoSink != sink)
         {
+            if (m_videoSink)
+            {
+                disconnect(m_videoSink, &QVideoSink::destroyed, this, nullptr);
+            }
             m_videoSink = sink;
+            if (m_videoSink)
+            {
+                connect(m_videoSink, &QVideoSink::destroyed, this, [this](QObject *)
+                        {
+                    spdlog::info("[QmlVideoSinkFilter] QVideoSink destroyed");
+                    m_videoSink = nullptr; });
+            }
             emit videoSinkChanged();
         }
     }

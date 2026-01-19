@@ -22,15 +22,23 @@ namespace pb
 
     VideoDecoder::~VideoDecoder()
     {
+        spdlog::info("[VideoDecoder] Destructor started");
+        spdlog::default_logger()->flush();
         stop();
         if (m_codecCtx)
         {
+            spdlog::info("[VideoDecoder] Freeing codec context");
+            spdlog::default_logger()->flush();
             avcodec_free_context(&m_codecCtx);
         }
         if (m_hwDeviceCtx)
         {
+            spdlog::info("[VideoDecoder] Unreffing HW device context");
+            spdlog::default_logger()->flush();
             av_buffer_unref(&m_hwDeviceCtx);
         }
+        spdlog::info("[VideoDecoder] Destructor finished");
+        spdlog::default_logger()->flush();
     }
 
     enum AVPixelFormat VideoDecoder::get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)

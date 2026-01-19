@@ -115,21 +115,31 @@ namespace pb
 
     RtspServerFilter::~RtspServerFilter()
     {
+        spdlog::info("[RtspServerFilter] Destructor started");
+        spdlog::default_logger()->flush();
         stop();
 
         // Final cleanup of Live555 objects
         if (m_rtspServer)
         {
+            spdlog::info("[RtspServerFilter] Closing RTSP server");
+            spdlog::default_logger()->flush();
             Medium::close(m_rtspServer);
         }
         if (m_env)
         {
+            spdlog::info("[RtspServerFilter] Reclaiming environment");
+            spdlog::default_logger()->flush();
             m_env->reclaim();
         }
         if (m_scheduler)
         {
+            spdlog::info("[RtspServerFilter] Deleting scheduler");
+            spdlog::default_logger()->flush();
             delete m_scheduler;
         }
+        spdlog::info("[RtspServerFilter] Destructor finished");
+        spdlog::default_logger()->flush();
     }
 
     bool RtspServerFilter::initialize(AVCodecContext *encoderCtx)

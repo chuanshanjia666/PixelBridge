@@ -35,25 +35,46 @@ namespace pb
 
     ScreenCapture::~ScreenCapture()
     {
+        spdlog::info("[ScreenCapture] Destructor started");
+        spdlog::default_logger()->flush();
         stop();
 
         // 显式断开所有连接，防止在销毁过程中仍有信号进入导致的 pure virtual call
         if (m_videoSink)
         {
+            spdlog::info("[ScreenCapture] Disconnecting video sink");
+            spdlog::default_logger()->flush();
             disconnect(m_videoSink, nullptr, this, nullptr);
         }
 
         if (m_screenCapture)
-            m_screenCapture->deleteLater();
+        {
+            spdlog::info("[ScreenCapture] Deleting m_screenCapture");
+            spdlog::default_logger()->flush();
+            delete m_screenCapture;
+            m_screenCapture = nullptr;
+        }
         if (m_captureSession)
-            m_captureSession->deleteLater();
+        {
+            spdlog::info("[ScreenCapture] Deleting m_captureSession");
+            spdlog::default_logger()->flush();
+            delete m_captureSession;
+            m_captureSession = nullptr;
+        }
         if (m_videoSink)
-            m_videoSink->deleteLater();
+        {
+            spdlog::info("[ScreenCapture] Deleting m_videoSink");
+            spdlog::default_logger()->flush();
+            delete m_videoSink;
+            m_videoSink = nullptr;
+        }
 
         if (m_codecParams)
         {
             avcodec_parameters_free(&m_codecParams);
         }
+        spdlog::info("[ScreenCapture] Destructor finished");
+        spdlog::default_logger()->flush();
     }
 
     bool ScreenCapture::initialize()
@@ -147,17 +168,32 @@ namespace pb
 
     void ScreenCapture::stop()
     {
+        if (!m_running)
+            return;
+        spdlog::info("[ScreenCapture] stop() called");
         m_running = false;
         m_cv.notify_all();
         if (m_worker.joinable())
         {
+            spdlog::info("[ScreenCapture] Joining worker thread");
             m_worker.join();
+            spdlog::info("[ScreenCapture] Worker thread joined");
         }
 
         if (m_screenCapture)
         {
-            QMetaObject::invokeMethod(m_screenCapture, [this]
-                                      { m_screenCapture->setActive(false); }, Qt::QueuedConnection);
+            spdlog::info("[ScreenCapture] Deactivating QScreenCapture");
+            // Since stop() is usually called from the GUI thread during shutdown,
+            // and we want to be sure it's deactivated before objects are deleted.
+            if (QThread::currentThread() == qGuiApp->thread())
+            {
+                m_screenCapture->setActive(false);
+            }
+            else
+            {
+                QMetaObject::invokeMethod(m_screenCapture, [this]
+                                          { if (m_screenCapture) m_screenCapture->setActive(false); }, Qt::BlockingQueuedConnection);
+            }
         }
     }
 

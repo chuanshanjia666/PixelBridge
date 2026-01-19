@@ -24,11 +24,13 @@ namespace pb
 
     private:
         void run();
+        static int interrupt_callback(void *opaque);
 
         std::string m_url;
         AVFormatContext *m_formatCtx = nullptr;
         std::thread m_thread;
         std::atomic<bool> m_running{false};
+        std::atomic<bool> m_aborting{false};
         int m_videoStreamIndex = -1;
     };
 

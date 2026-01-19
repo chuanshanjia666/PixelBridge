@@ -246,6 +246,20 @@ ScrollView {
                         }
                     }
 
+                    Label { text: "延迟等级:"; color: window.colorSecondary; font.pixelSize: 14 }
+                    ComboBox {
+                        id: serveLatency
+                        model: ["极低 (Ultra-Low)", "平衡 (Low)", "稳定 (Standard)"]
+                        currentIndex: 1
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 45
+                        font.pixelSize: 14
+                        leftPadding: 15
+                        palette.text: window.colorText
+                        palette.buttonText: window.colorText
+                        background: Rectangle { color: "#2a2a2a"; radius: 8; border.color: "#333" }
+                    }
+
                     CheckBox {
                         id: echoEnable
                         text: "本地预览 (Echo)"
@@ -401,7 +415,7 @@ ScrollView {
                         onClicked: {
                             let hw = serveHw.currentText === "None" ? "" : serveHw.currentText
                             let fps = serveFps.value
-                            let lat = 1
+                            let lat = serveLatency.currentIndex
                             let echo = echoEnable.checked
                             if (protocolType.currentText === "RTSP Server") {
                                 bridge.startServe(serveSource.text, serverPort.value, serverStreamName.text, serveEnc.currentText, hw, fps, lat, echo, serverAddress.text)
