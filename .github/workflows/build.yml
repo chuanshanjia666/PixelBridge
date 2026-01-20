@@ -32,6 +32,7 @@ jobs:
             libavformat-dev libavcodec-dev libavutil-dev libavdevice-dev libswscale-dev \
             libspdlog-dev \
             libgl1-mesa-dev \
+            libfuse2 \
             ninja-build
 
       - name: Install system dependencies (macOS)
@@ -73,6 +74,26 @@ jobs:
           fi
         shell: bash
 
+      - name: Package (Linux DEB)
+        if: runner.os == 'Linux'
+        run: |
+          cd build/release
+          cpack -G DEB
+        shell: bash
+
+      - name: Package (Linux AppImage)
+        if: runner.os == 'Linux'
+        run: |
+          # Download tools
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
+
+          # Run packaging script
+          export QMAKE=$(which qmake || which qmake6)
+          bash scripts/package_appimage.sh
+        shell: bash
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -80,6 +101,7 @@ jobs:
           path: |
             build/release/PixelBridge*
             build/release/*.exe
-            build/release/bench_*
+            build/release/*.deb
+            build/release/*.AppImage
+            PixelBridge*.AppImage
             build/windows-msvc/Release/PixelBridge.exe
-            build/windows-msvc/Release/bench_*

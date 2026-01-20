@@ -4,6 +4,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -33,6 +34,7 @@ int main(int argc, char *argv[])
     spdlog::set_level(spdlog::level::debug);
 
     QGuiApplication app(argc, argv);
+    app.setWindowIcon(QIcon(":/assets/icons/pixelbridge.svg"));
 
     if (avformat_network_init() < 0)
     {

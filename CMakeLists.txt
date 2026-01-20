@@ -73,6 +73,37 @@ if(WIN32)
     target_link_libraries(PixelBridge psapi)
 endif()
 
+# --- Installation ---
+include(GNUInstallDirs)
+
+install(TARGETS PixelBridge
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+if(UNIX AND NOT APPLE)
+    install(FILES assets/icons/pixelbridge.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+        RENAME pixelbridge.svg
+    )
+    install(FILES PixelBridge.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+    )
+endif()
+
+# --- CPack Configuration ---
+set(CPACK_PACKAGE_NAME "pixelbridge")
+set(CPACK_PACKAGE_VENDOR "PixelBridge")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Efficient Screen Capture and RTSP Server")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/chuanshanjia/PixelBridge")
+
+set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Chuanshanjia")
+set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+include(CPack)
 
 # add_executable(bench_qt_capture tests/bench_qt_capture.cpp)
 # target_link_libraries(bench_qt_capture 

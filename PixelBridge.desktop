@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=PixelBridge
+Comment=PixelBridge Screen Capture and RTSP Server
+Exec=PixelBridge
+Icon=pixelbridge
+Terminal=false
+Categories=Video;AudioVideo;Network;
