@@ -10,6 +10,8 @@ ApplicationWindow {
     height: 750
     title: qsTr("PixelBridge")
 
+    property bool isSidebarVisible: true
+
     readonly property color colorPrimary: "#0078D4"
     readonly property color colorBg: "#0B0B0B"
     readonly property color colorSurface: "#161616"
@@ -38,11 +40,18 @@ ApplicationWindow {
         // Sidebar
         Rectangle {
             Layout.fillHeight: true
-            Layout.preferredWidth: 220
+            Layout.preferredWidth: isSidebarVisible ? 220 : 0
+            visible: isSidebarVisible || Layout.preferredWidth > 0
             color: window.colorSurface
+            clip: true
+
+            Behavior on Layout.preferredWidth {
+                NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
+            }
 
             ColumnLayout {
-                anchors.fill: parent
+                width: 220
+                height: parent.height
                 spacing: 0
 
                 Rectangle {
@@ -126,18 +135,68 @@ ApplicationWindow {
         }
 
         // Main Content
-        StackLayout {
+        ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: true
-            currentIndex: sideNav.currentIndex
+            spacing: 0
 
-            DisplayPage {
-                id: displayPage
-                Layout.margins: 20
+            // Top Bar
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 60
+                color: window.colorBg
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    spacing: 15
+
+                    Button {
+                        id: toggleBtn
+                        Layout.preferredWidth: 40
+                        Layout.preferredHeight: 40
+                        flat: true
+                        text: isSidebarVisible ? "" : "" // Using Fluent icons if available, or just symbols
+                        font.pixelSize: 20
+                        
+                        contentItem: Text {
+                            text: isSidebarVisible ? "◀" : "▶"
+                            font.pixelSize: 16
+                            color: window.colorText
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        background: Rectangle {
+                            color: toggleBtn.down ? "#333" : (toggleBtn.hovered ? "#222" : "transparent")
+                            radius: 4
+                        }
+
+                        onClicked: isSidebarVisible = !isSidebarVisible
+                    }
+
+                    Text {
+                        text: sideNav.currentIndex === 0 ? qsTr("监控画面") : qsTr("配置中心")
+                        color: window.colorText
+                        font.pixelSize: 18
+                        font.bold: true
+                    }
+                }
             }
 
-            SettingsPage {
-                id: settingsPage
+            StackLayout {
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                currentIndex: sideNav.currentIndex
+
+                DisplayPage {
+                    id: displayPage
+                    Layout.margins: 20
+                }
+
+                SettingsPage {
+                    id: settingsPage
+                }
             }
         }
     }
