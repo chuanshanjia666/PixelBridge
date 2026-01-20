@@ -9,6 +9,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia)
+find_package(Threads REQUIRED)
 
 # Find FFmpeg
 find_package(PkgConfig REQUIRED)
@@ -67,7 +68,7 @@ target_link_libraries(PixelBridge
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::Multimedia
-    pthread
+    Threads::Threads
 )
 
 

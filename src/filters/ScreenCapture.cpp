@@ -6,7 +6,10 @@
 #include <QThread>
 #include <QDateTime>
 #include <fstream>
+
+#ifdef __linux__
 #include <unistd.h>
+#endif
 
 extern "C"
 {
@@ -20,12 +23,18 @@ namespace pb
     // 获取当前进程的内存统计
     static void get_memory_usage(long &vms, long &rss)
     {
+#ifdef __linux__
         std::ifstream stat_stream("/proc/self/statm", std::ios_base::in);
         long vms_pages, rss_pages;
         stat_stream >> vms_pages >> rss_pages;
         long page_size = sysconf(_SC_PAGE_SIZE);
         vms = vms_pages * page_size / 1024 / 1024;
         rss = rss_pages * page_size / 1024 / 1024;
+#else
+        // TODO: Implement for other platforms
+        vms = 0;
+        rss = 0;
+#endif
     }
 
     ScreenCapture::ScreenCapture(const std::string &display, int fps)
