@@ -1,8 +1,11 @@
-cmake_minimum_required(VERSION 3.10)
-project(PixelBridge)
+cmake_minimum_required(VERSION 3.14)
+project(PixelBridge VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Suppress AUTOMOC warnings for .hh files (common in live555)
+cmake_policy(SET CMP0100 NEW)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -11,9 +14,23 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia)
 find_package(Threads REQUIRED)
 
-# Use ECM for better FindFFmpeg support
-find_package(ECM REQUIRED NO_MODULE)
-list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
+# --- Automatically download and include extra-cmake-modules (ECM) ---
+include(FetchContent)
+FetchContent_Declare(
+    ecm
+    GIT_REPOSITORY https://github.com/KDE/extra-cmake-modules.git
+    GIT_TAG master
+)
+
+FetchContent_GetProperties(ecm)
+if(NOT ecm_POPULATED)
+    FetchContent_Populate(ecm)
+endif()
+
+# We only need the modules, NOT to build the ECM project itself.
+# This avoids the Sphinx/documentation warnings.
+list(APPEND CMAKE_MODULE_PATH "${ecm_SOURCE_DIR}/find-modules")
+# ------------------------------------------------------------------
 
 find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL AVDEVICE SWSCALE REQUIRED)
 
