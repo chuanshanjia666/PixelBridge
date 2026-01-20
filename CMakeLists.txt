@@ -12,13 +12,28 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedi
 find_package(Threads REQUIRED)
 
 # Find FFmpeg
-find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
-pkg_check_modules(AVFORMAT REQUIRED libavformat)
-pkg_check_modules(AVCODEC REQUIRED libavcodec)
-pkg_check_modules(AVUTIL REQUIRED libavutil)
-pkg_check_modules(AVDEVICE REQUIRED libavdevice)
-pkg_check_modules(SWSCALE REQUIRED libswscale)
+
+if(WIN32)
+    # On Windows, vcpkg is used. It integrates with find_path and find_library.
+    find_path(AVFORMAT_INCLUDE_DIRS libavformat/avformat.h)
+    find_library(AVFORMAT_LIBRARIES avformat)
+    find_path(AVCODEC_INCLUDE_DIRS libavcodec/avcodec.h)
+    find_library(AVCODEC_LIBRARIES avcodec)
+    find_path(AVUTIL_INCLUDE_DIRS libavutil/avutil.h)
+    find_library(AVUTIL_LIBRARIES avutil)
+    find_path(AVDEVICE_INCLUDE_DIRS libavdevice/avdevice.h)
+    find_library(AVDEVICE_LIBRARIES avdevice)
+    find_path(SWSCALE_INCLUDE_DIRS libswscale/swscale.h)
+    find_library(SWSCALE_LIBRARIES swscale)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(AVFORMAT REQUIRED libavformat)
+    pkg_check_modules(AVCODEC REQUIRED libavcodec)
+    pkg_check_modules(AVUTIL REQUIRED libavutil)
+    pkg_check_modules(AVDEVICE REQUIRED libavdevice)
+    pkg_check_modules(SWSCALE REQUIRED libswscale)
+endif()
 
 find_package(spdlog REQUIRED)
 

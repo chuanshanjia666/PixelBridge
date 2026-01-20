@@ -33,6 +33,7 @@ jobs:
             libspdlog-dev \
             libgl1-mesa-dev \
             libfuse2 \
+            libxcb-cursor0 \
             ninja-build
 
       - name: Install system dependencies (macOS)
@@ -43,8 +44,8 @@ jobs:
       - name: Install system dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
-          choco install ffmpeg ninja pkgconfiglite
-          vcpkg install spdlog:x64-windows
+          choco install ninja pkgconfiglite
+          vcpkg install spdlog:x64-windows ffmpeg:x64-windows
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
