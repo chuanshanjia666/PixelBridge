@@ -5,7 +5,7 @@ set(LIVE555_DIR ${CMAKE_CURRENT_SOURCE_DIR}/live555)
 # High-level configuration
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Compile flags matching config.linux-64bit
+# Compile flags matching config.linux-64bit or win32config
 if(UNIX)
     add_definitions(
         -DSOCKLEN_T=socklen_t
@@ -13,6 +13,12 @@ if(UNIX)
         -D_FILE_OFFSET_BITS=64
         -DALLOW_RTSP_SERVER_PORT_REUSE=1
         -DBSD=1
+    )
+elseif(WIN32)
+    add_definitions(
+        -D_CRT_SECURE_NO_WARNINGS
+        -D_WINSOCK_DEPRECATED_NO_WARNINGS
+        -DALLOW_RTSP_SERVER_PORT_REUSE=1
     )
 endif()
 
@@ -40,6 +46,10 @@ target_include_directories(groupsock PUBLIC
     ${LIVE555_DIR}/groupsock/include
     ${LIVE555_DIR}/UsageEnvironment/include
 )
+
+if(WIN32)
+    target_link_libraries(groupsock PUBLIC ws2_32 advapi32)
+endif()
 
 # 4. liveMedia
 file(GLOB LIVE_MEDIA_SRCS "${LIVE555_DIR}/liveMedia/*.cpp" "${LIVE555_DIR}/liveMedia/*.c")
