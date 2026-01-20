@@ -22,6 +22,8 @@ DESTDIR=$(pwd)/$APP_DIR cmake --build $BUILD_DIR --target install
 export VERSION=1.0.0
 # Tell the Qt plugin where to look for QML files to bundle dependencies
 export QML_SOURCES_PATHS="qml"
+# Force inclusion of wayland platform plugin for Wayland screen capture support
+export EXTRA_QT_PLUGINS="wayland;wayland-egl"
 
 $LINUXDEPLOY \
     --appdir $APP_DIR \

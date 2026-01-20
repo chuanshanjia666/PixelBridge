@@ -34,6 +34,8 @@ jobs:
             libgl1-mesa-dev \
             libfuse2 \
             libxcb-cursor0 \
+            libwayland-dev libxkbcommon-dev \
+            libpipewire-0.3-dev libportal-dev \
             ninja-build
 
       - name: Install system dependencies (macOS)
@@ -50,8 +52,8 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
-          version: "6.5.*"
-          modules: "qtmultimedia qtshadertools"
+          version: "6.5.3"
+          modules: "qtmultimedia qtshadertools ${{ runner.os == 'Linux' && 'qtwayland' || '' }}"
 
       - name: Set up MSVC (Windows)
         if: runner.os == 'Windows'

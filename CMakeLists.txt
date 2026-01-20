@@ -42,8 +42,6 @@ find_package(spdlog REQUIRED)
 add_subdirectory(thirdparty)
 
 include_directories(include)
-include_directories(${FFMPEG_INCLUDE_DIRS})
-include_directories(${LIVE555_INCLUDE_DIRS})
 
 set(SOURCES
     src/main.cpp
@@ -66,9 +64,17 @@ set(SOURCES
 add_executable(PixelBridge ${SOURCES})
 
 target_link_libraries(PixelBridge
-    ${FFMPEG_LIBRARIES}
+    PRIVATE
+    FFmpeg::avformat
+    FFmpeg::avcodec
+    FFmpeg::avutil
+    FFmpeg::avdevice
+    FFmpeg::swscale
     spdlog::spdlog
-    ${LIVE555_LIBRARIES}
+    liveMedia
+    groupsock
+    BasicUsageEnvironment
+    UsageEnvironment
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
@@ -76,6 +82,8 @@ target_link_libraries(PixelBridge
     Qt6::QuickControls2
     Qt6::Multimedia
     Threads::Threads
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 if(WIN32)

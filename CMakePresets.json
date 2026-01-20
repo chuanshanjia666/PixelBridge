@@ -31,9 +31,8 @@
     {
       "name": "windows-msvc",
       "displayName": "Windows MSVC",
-      "description": "Windows build using MSVC",
+      "description": "Windows build using MSVC and Ninja",
       "inherits": "base",
-      "generator": "Visual Studio 17 2022",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
