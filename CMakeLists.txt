@@ -37,6 +37,8 @@ set(SOURCES
     src/main.cpp
     src/core/Bridge.cpp
     include/core/Bridge.h
+    src/core/Logger.cpp
+    include/core/Logger.h
     src/filters/Demuxer.cpp
     src/filters/VideoDecoder.cpp
     src/filters/ScreenCapture.cpp

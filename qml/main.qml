@@ -87,6 +87,7 @@ ApplicationWindow {
                     model: ListModel {
                         ListElement { name: qsTr("监控画面"); icon: "🖥️" }
                         ListElement { name: qsTr("配置中心"); icon: "⚙️" }
+                        ListElement { name: qsTr("日志信息"); icon: "📝" }
                     }
                     delegate: ItemDelegate {
                         width: parent.width
@@ -176,7 +177,11 @@ ApplicationWindow {
                     }
 
                     Text {
-                        text: sideNav.currentIndex === 0 ? qsTr("监控画面") : qsTr("配置中心")
+                        text: {
+                            if (sideNav.currentIndex === 0) return qsTr("监控画面")
+                            if (sideNav.currentIndex === 1) return qsTr("配置中心")
+                            return qsTr("日志信息")
+                        }
                         color: window.colorText
                         font.pixelSize: 18
                         font.bold: true
@@ -196,6 +201,10 @@ ApplicationWindow {
 
                 SettingsPage {
                     id: settingsPage
+                }
+
+                LogPage {
+                    id: logPage
                 }
             }
         }

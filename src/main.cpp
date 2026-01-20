@@ -2,12 +2,14 @@
 #include <chrono>
 #include <thread>
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
 
 #include "core/Bridge.h"
+#include "core/Logger.h"
 #include "filters/Demuxer.h"
 #include "filters/VideoDecoder.h"
 #include "filters/VideoSink.h"
@@ -23,6 +25,11 @@ extern "C"
 
 int main(int argc, char *argv[])
 {
+    auto qmlSink = std::make_shared<QmlLogSinkMt>();
+    auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+
+    auto logger = std::make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{consoleSink, qmlSink});
+    spdlog::set_default_logger(logger);
     spdlog::set_level(spdlog::level::debug);
 
     QGuiApplication app(argc, argv);
@@ -41,6 +48,7 @@ int main(int argc, char *argv[])
         Bridge bridge;
         QQmlApplicationEngine engine;
         engine.rootContext()->setContextProperty("bridge", &bridge);
+        engine.rootContext()->setContextProperty("logModel", &Logger::instance());
         const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
         QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &app, [url](QObject *obj, const QUrl &objUrl)
                          {
