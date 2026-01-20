@@ -20,6 +20,8 @@ DESTDIR=$(pwd)/$APP_DIR cmake --build $BUILD_DIR --target install
 # Run linuxdeploy
 # export QMAKE=/usr/lib/qt6/bin/qmake # Adjust path if needed if not in PATH
 export VERSION=1.0.0
+# Tell the Qt plugin where to look for QML files to bundle dependencies
+export QML_SOURCES_PATHS="qml"
 
 $LINUXDEPLOY \
     --appdir $APP_DIR \

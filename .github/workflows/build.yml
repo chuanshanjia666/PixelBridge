@@ -34,24 +34,25 @@ jobs:
             libgl1-mesa-dev \
             libfuse2 \
             libxcb-cursor0 \
+            extra-cmake-modules \
             ninja-build
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install ffmpeg spdlog ninja pkg-config
+          brew install ffmpeg spdlog ninja pkg-config extra-cmake-modules
 
       - name: Install system dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
           choco install ninja pkgconfiglite
-          vcpkg install spdlog:x64-windows ffmpeg:x64-windows
+          vcpkg install spdlog:x64-windows ffmpeg:x64-windows extra-cmake-modules:x64-windows
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
           version: "6.5.*"
-          modules: "qtmultimedia qtshadertools"
+          modules: "qtmultimedia qtshadertools qtdeclarative qtwayland"
 
       - name: Set up MSVC (Windows)
         if: runner.os == 'Windows'

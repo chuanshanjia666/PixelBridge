@@ -11,40 +11,21 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia)
 find_package(Threads REQUIRED)
 
+# Use ECM for better FindFFmpeg support
+find_package(ECM REQUIRED NO_MODULE)
+list(APPEND CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
+
+find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL AVDEVICE SWSCALE REQUIRED)
+
 # Find FFmpeg
 find_package(OpenSSL REQUIRED)
-
-if(WIN32)
-    # On Windows, vcpkg is used. It integrates with find_path and find_library.
-    find_path(AVFORMAT_INCLUDE_DIRS libavformat/avformat.h)
-    find_library(AVFORMAT_LIBRARIES avformat)
-    find_path(AVCODEC_INCLUDE_DIRS libavcodec/avcodec.h)
-    find_library(AVCODEC_LIBRARIES avcodec)
-    find_path(AVUTIL_INCLUDE_DIRS libavutil/avutil.h)
-    find_library(AVUTIL_LIBRARIES avutil)
-    find_path(AVDEVICE_INCLUDE_DIRS libavdevice/avdevice.h)
-    find_library(AVDEVICE_LIBRARIES avdevice)
-    find_path(SWSCALE_INCLUDE_DIRS libswscale/swscale.h)
-    find_library(SWSCALE_LIBRARIES swscale)
-else()
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(AVFORMAT REQUIRED libavformat)
-    pkg_check_modules(AVCODEC REQUIRED libavcodec)
-    pkg_check_modules(AVUTIL REQUIRED libavutil)
-    pkg_check_modules(AVDEVICE REQUIRED libavdevice)
-    pkg_check_modules(SWSCALE REQUIRED libswscale)
-endif()
 
 find_package(spdlog REQUIRED)
 
 add_subdirectory(thirdparty)
 
 include_directories(include)
-include_directories(${AVFORMAT_INCLUDE_DIRS})
-include_directories(${AVCODEC_INCLUDE_DIRS})
-include_directories(${AVUTIL_INCLUDE_DIRS})
-include_directories(${AVDEVICE_INCLUDE_DIRS})
-include_directories(${SWSCALE_INCLUDE_DIRS})
+include_directories(${FFMPEG_INCLUDE_DIRS})
 include_directories(${LIVE555_INCLUDE_DIRS})
 
 set(SOURCES
@@ -68,11 +49,7 @@ set(SOURCES
 add_executable(PixelBridge ${SOURCES})
 
 target_link_libraries(PixelBridge
-    ${AVFORMAT_LIBRARIES}
-    ${AVCODEC_LIBRARIES}
-    ${AVUTIL_LIBRARIES}
-    ${AVDEVICE_LIBRARIES}
-    ${SWSCALE_LIBRARIES}
+    ${FFMPEG_LIBRARIES}
     spdlog::spdlog
     ${LIVE555_LIBRARIES}
     Qt6::Core
