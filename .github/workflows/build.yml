@@ -61,7 +61,7 @@ jobs:
           if [ "${{ runner.os }}" == "Windows" ]; then
             cmake --preset windows-msvc -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           else
-            cmake --preset release
+            cmake --preset release -DCMAKE_INSTALL_PREFIX=/usr
           fi
         shell: bash
 

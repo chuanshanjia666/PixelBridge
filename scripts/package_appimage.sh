@@ -14,7 +14,8 @@ rm -rf $APP_DIR
 mkdir -p $APP_DIR
 
 # Ensure build is up to date and installed to AppDir
-DESTDIR=$APP_DIR cmake --build $BUILD_DIR --target install
+# Use absolute path for DESTDIR to avoid confusion
+DESTDIR=$(pwd)/$APP_DIR cmake --build $BUILD_DIR --target install
 
 # Run linuxdeploy
 # export QMAKE=/usr/lib/qt6/bin/qmake # Adjust path if needed if not in PATH
@@ -26,6 +27,6 @@ $LINUXDEPLOY \
     --output appimage \
     --desktop-file PixelBridge.desktop \
     --icon-file assets/icons/pixelbridge.svg \
-    --executable $APP_DIR/usr/local/bin/PixelBridge
+    --executable $APP_DIR/usr/bin/PixelBridge
 
 echo "AppImage generated successfully!"
