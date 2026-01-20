@@ -31,34 +31,47 @@ jobs:
             pkg-config \
             libavformat-dev libavcodec-dev libavutil-dev libavdevice-dev libswscale-dev \
             libspdlog-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             libgl1-mesa-dev \
             ninja-build
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install ffmpeg spdlog gstreamer ninja pkg-config
+          brew install ffmpeg spdlog ninja pkg-config
 
       - name: Install system dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
-          choco install ffmpeg spdlog gstreamer ninja
-          # Note: Paths might need to be added to GITHUB_PATH if not found by CMake
+          choco install ffmpeg ninja pkgconfiglite
+          vcpkg install spdlog:x64-windows
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
           version: "6.5.*"
-          modules: "qtmultimedia qtquickcontrols2"
+          modules: "qtmultimedia qtshadertools"
+
+      - name: Set up MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Configure CMake
         run: |
-          cmake --preset release
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            cmake --preset windows-msvc -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          else
+            cmake --preset release
+          fi
+        shell: bash
 
       - name: Build
         run: |
-          cmake --build --preset release --parallel
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            cmake --build --preset windows-msvc --parallel
+          else
+            cmake --build --preset release --parallel
+          fi
+        shell: bash
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -68,3 +81,5 @@ jobs:
             build/release/PixelBridge*
             build/release/*.exe
             build/release/bench_*
+            build/windows-msvc/Release/PixelBridge.exe
+            build/windows-msvc/Release/bench_*

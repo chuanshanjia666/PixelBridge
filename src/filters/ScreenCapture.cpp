@@ -9,6 +9,11 @@
 
 #ifdef __linux__
 #include <unistd.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#include <psapi.h>
+#elif defined(__APPLE__)
+#include <mach/mach.h>
 #endif
 
 extern "C"
@@ -30,8 +35,32 @@ namespace pb
         long page_size = sysconf(_SC_PAGE_SIZE);
         vms = vms_pages * page_size / 1024 / 1024;
         rss = rss_pages * page_size / 1024 / 1024;
+#elif defined(_WIN32)
+        PROCESS_MEMORY_COUNTERS_EX pmc;
+        if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS *)&pmc, sizeof(pmc)))
+        {
+            vms = (long)(pmc.PrivateUsage / 1024 / 1024);
+            rss = (long)(pmc.WorkingSetSize / 1024 / 1024);
+        }
+        else
+        {
+            vms = 0;
+            rss = 0;
+        }
+#elif defined(__APPLE__)
+        struct mach_task_basic_info info;
+        mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+        if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &count) == KERN_SUCCESS)
+        {
+            vms = (long)(info.virtual_size / 1024 / 1024);
+            rss = (long)(info.resident_size / 1024 / 1024);
+        }
+        else
+        {
+            vms = 0;
+            rss = 0;
+        }
 #else
-        // TODO: Implement for other platforms
         vms = 0;
         rss = 0;
 #endif

@@ -19,8 +19,8 @@ pkg_check_modules(AVCODEC REQUIRED libavcodec)
 pkg_check_modules(AVUTIL REQUIRED libavutil)
 pkg_check_modules(AVDEVICE REQUIRED libavdevice)
 pkg_check_modules(SWSCALE REQUIRED libswscale)
-pkg_check_modules(SPDLOG REQUIRED spdlog)
-pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0 gobject-2.0 glib-2.0)
+
+find_package(spdlog REQUIRED)
 
 add_subdirectory(thirdparty)
 
@@ -30,9 +30,7 @@ include_directories(${AVCODEC_INCLUDE_DIRS})
 include_directories(${AVUTIL_INCLUDE_DIRS})
 include_directories(${AVDEVICE_INCLUDE_DIRS})
 include_directories(${SWSCALE_INCLUDE_DIRS})
-include_directories(${SPDLOG_INCLUDE_DIRS})
 include_directories(${LIVE555_INCLUDE_DIRS})
-include_directories(${GSTREAMER_INCLUDE_DIRS})
 
 set(SOURCES
     src/main.cpp
@@ -60,7 +58,7 @@ target_link_libraries(PixelBridge
     ${AVUTIL_LIBRARIES}
     ${AVDEVICE_LIBRARIES}
     ${SWSCALE_LIBRARIES}
-    ${SPDLOG_LIBRARIES}
+    spdlog::spdlog
     ${LIVE555_LIBRARIES}
     Qt6::Core
     Qt6::Gui
@@ -71,10 +69,14 @@ target_link_libraries(PixelBridge
     Threads::Threads
 )
 
+if(WIN32)
+    target_link_libraries(PixelBridge psapi)
+endif()
 
-add_executable(bench_qt_capture tests/bench_qt_capture.cpp)
-target_link_libraries(bench_qt_capture 
-    Qt6::Core 
-    Qt6::Gui 
-    Qt6::Multimedia
-)
+
+# add_executable(bench_qt_capture tests/bench_qt_capture.cpp)
+# target_link_libraries(bench_qt_capture 
+#     Qt6::Core 
+#     Qt6::Gui 
+#     Qt6::Multimedia
+# )
