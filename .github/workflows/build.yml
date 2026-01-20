@@ -53,7 +53,7 @@ jobs:
         uses: jurplel/install-qt-action@v3
         with:
           version: "6.5.3"
-          modules: "qtmultimedia qtshadertools ${{ runner.os == 'Linux' && 'qtwayland' || '' }}"
+          modules: "qtmultimedia qtshadertools"
 
       - name: Set up MSVC (Windows)
         if: runner.os == 'Windows'
