@@ -9,8 +9,12 @@ APP_DIR="AppDir"
 # Tools (Assumed to be downloaded by Workflow/CI)
 LINUXDEPLOY="./linuxdeploy-x86_64.AppImage"
 
+# Clean up and prepare AppDir
+rm -rf $APP_DIR
+mkdir -p $APP_DIR
+
 # Ensure build is up to date and installed to AppDir
-cmake --build $BUILD_DIR --target install DESTDIR=$APP_DIR
+DESTDIR=$APP_DIR cmake --build $BUILD_DIR --target install
 
 # Run linuxdeploy
 # export QMAKE=/usr/lib/qt6/bin/qmake # Adjust path if needed if not in PATH

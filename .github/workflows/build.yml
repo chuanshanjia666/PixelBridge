@@ -89,6 +89,9 @@ jobs:
           wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy*.AppImage
 
+          # Rename plugin for linuxdeploy to find it
+          mv linuxdeploy-plugin-qt-x86_64.AppImage linuxdeploy-plugin-qt.AppImage
+
           # Run packaging script
           export QMAKE=$(which qmake || which qmake6)
           bash scripts/package_appimage.sh
