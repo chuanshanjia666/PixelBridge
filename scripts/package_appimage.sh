@@ -32,6 +32,10 @@ export QML_SOURCES_PATHS="qml"
 # Force inclusion of wayland platform plugin for Wayland screen capture support
 export EXTRA_QT_PLUGINS="wayland;wayland-egl"
 
+# Fix for modern distributions (like Arch) where the bundled 'strip' in linuxdeploy
+# does not support the new SHT_RELR relocation format.
+export NO_STRIP=1
+
 $LINUXDEPLOY \
     --appdir $APP_DIR \
     --plugin qt \
