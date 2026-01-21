@@ -22,6 +22,8 @@ mkdir -p $APP_DIR
 
 # Ensure build is up to date and installed to AppDir
 # Use absolute path for DESTDIR to avoid confusion
+# Set CMAKE_INSTALL_PREFIX to /usr so it matches linuxdeploy expectations
+cmake -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 DESTDIR=$(pwd)/$APP_DIR cmake --build $BUILD_DIR --target install
 
 # Set Qt environment for linuxdeploy
@@ -39,7 +41,8 @@ export VERSION=1.0.0
 export QML_SOURCES_PATHS="$(pwd)/qml"
 # Force inclusion of all necessary platform plugins and shell extensions
 # Using categories ensures that both wayland and xcb (and others) are included
-export EXTRA_QT_PLUGINS="platforms;imageformats;iconengines;wayland-shell-extensions;multimedia"
+# Specifically adding 'wayland' plugin name to ensure it's picked up for Qt 6
+export EXTRA_QT_PLUGINS="platforms;wayland;imageformats;iconengines;wayland-shell-integration;wayland-graphics-integration-client;wayland-decoration-client;multimedia"
 
 # Fix for modern distributions (like Arch) where the bundled 'strip' in linuxdeploy
 # does not support the new SHT_RELR relocation format.
