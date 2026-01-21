@@ -55,17 +55,23 @@ jobs:
       - name: Package (ZIP)
         run: |
           # Ensure Qt helper tools are in PATH for windeployqt
-          export PATH=$MSYSTEM_PREFIX/lib/qt6/bin:$PATH
+          # In MSYS2, tools like qmlimportscanner.exe are in $MSYSTEM_PREFIX/lib/qt6/bin/
+          # but windeployqt.exe is in $MSYSTEM_PREFIX/bin/
+          export PATH=$MSYSTEM_PREFIX/bin:$MSYSTEM_PREFIX/lib/qt6/bin:$PATH
 
           EXE_PATH="build/release/PixelBridge.exe"
 
+          # Detect windeployqt version
           if command -v windeployqt6 >/dev/null 2>&1; then
             WINDEPLOYQT="windeployqt6"
           else
             WINDEPLOYQT="windeployqt"
           fi
 
-          $WINDEPLOYQT --release --no-translations --no-compiler-runtime --qmldir qml $EXE_PATH
+          echo "Using $WINDEPLOYQT from $(which $WINDEPLOYQT)"
+
+          # Use absolute path for qmldir to avoid scanner focus issues
+          $WINDEPLOYQT --release --no-translations --no-compiler-runtime --qmldir "$(pwd)/qml" "$EXE_PATH"
 
           # Now package
           cd build/release

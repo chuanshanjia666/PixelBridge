@@ -9,17 +9,14 @@ on:
 jobs:
   build-appimage:
     name: AppImage (${{ matrix.arch }}) Build
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     container:
       image: archlinux:latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            arch: x64
-          - os: ubuntu-24.04-arm64
-            arch: arm64
+          - arch: x64
 
     steps:
       - name: Install base dependencies

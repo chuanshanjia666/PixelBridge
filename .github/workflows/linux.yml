@@ -9,15 +9,12 @@ on:
 jobs:
   build-linux-dist:
     name: Linux (${{ matrix.arch }}) DEB/RPM
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            arch: x64
-          - os: ubuntu-24.04-arm64
-            arch: arm64
+          - arch: x64
 
     steps:
       - name: Checkout code
