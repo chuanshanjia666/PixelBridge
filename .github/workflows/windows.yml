@@ -43,6 +43,8 @@ jobs:
             mingw-w64-ucrt-x86_64-qt6-declarative
             mingw-w64-ucrt-x86_64-qt6-shadertools
             mingw-w64-ucrt-x86_64-qt6-translations
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-qt6-svg
 
       - name: Configure CMake
         run: |
@@ -52,26 +54,38 @@ jobs:
         run: |
           cmake --build build/release --parallel
 
+      - name: Debug PATH and Tool Locations
+        run: |
+          echo "MSYSTEM_PREFIX: $MSYSTEM_PREFIX"
+          echo "Searching for windeployqt6..."
+          find $MSYSTEM_PREFIX -name "windeployqt6.exe"
+          echo "Searching for qmlimportscanner..."
+          find $MSYSTEM_PREFIX -name "qmlimportscanner.exe"
+          echo "PATH is: $PATH"
+
       - name: Package (ZIP)
         run: |
           # Ensure Qt helper tools are in PATH for windeployqt
-          # In MSYS2, tools like qmlimportscanner.exe are in $MSYSTEM_PREFIX/lib/qt6/bin/
-          # but windeployqt.exe is in $MSYSTEM_PREFIX/bin/
-          export PATH=$MSYSTEM_PREFIX/bin:$MSYSTEM_PREFIX/lib/qt6/bin:$PATH
+          # Use cygpath to get the absolute Windows path for the bin directories
+          QT_BIN_DIR=$(cygpath -u "$MSYSTEM_PREFIX/bin")
+          QT_HELPER_DIR=$(cygpath -u "$MSYSTEM_PREFIX/lib/qt6/bin")
+
+          # Add to PATH (MSYS2 bash style)
+          export PATH="$QT_BIN_DIR:$QT_HELPER_DIR:$PATH"
+
+          # Also set QMAKE environment variable
+          export QMAKE="$QT_BIN_DIR/qmake6.exe"
 
           EXE_PATH="build/release/PixelBridge.exe"
 
-          # Detect windeployqt version
-          if command -v windeployqt6 >/dev/null 2>&1; then
-            WINDEPLOYQT="windeployqt6"
-          else
-            WINDEPLOYQT="windeployqt"
-          fi
+          # Use absolute Windows paths for windeployqt
+          # windeployqt6 is a native Windows app, so it's better to give it Windows paths
+          WINDEPLOYQT_EXE=$(cygpath -w "$QT_BIN_DIR/windeployqt6.exe")
+          QML_DIR=$(cygpath -w "qml")
+          TARGET_EXE=$(cygpath -w "$EXE_PATH")
 
-          echo "Using $WINDEPLOYQT from $(which $WINDEPLOYQT)"
-
-          # Use absolute path for qmldir to avoid scanner focus issues
-          $WINDEPLOYQT --release --no-translations --no-compiler-runtime --qmldir "$(pwd)/qml" "$EXE_PATH"
+          echo "Using windeployqt from: $WINDEPLOYQT_EXE"
+          echo "Scanning QML from: $QML_DIR"
 
           # Now package
           cd build/release
