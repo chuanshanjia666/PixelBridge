@@ -8,12 +8,26 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.os }} Build
+    name: ${{ matrix.os }} (${{ matrix.arch }}) Build
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            arch: x64
+          - os: ubuntu-24.04-arm64
+            arch: arm64
+          - os: windows-latest
+            arch: x64
+            vcpkg_triplet: x64-windows
+          - os: windows-latest
+            arch: arm64
+            vcpkg_triplet: arm64-windows
+          - os: macos-13
+            arch: x64
+          - os: macos-latest
+            arch: arm64
 
     steps:
       - name: Checkout code
@@ -36,7 +50,8 @@ jobs:
             libxcb-cursor0 \
             libwayland-dev libxkbcommon-dev \
             libpipewire-0.3-dev libportal-dev \
-            ninja-build
+            ninja-build \
+            rpm
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
@@ -47,22 +62,25 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           choco install ninja pkgconfiglite
-          vcpkg install spdlog:x64-windows ffmpeg:x64-windows
+          vcpkg install spdlog:${{ matrix.vcpkg_triplet }} ffmpeg:${{ matrix.vcpkg_triplet }}
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
           version: "6.5.3"
           modules: "qtmultimedia qtshadertools"
+          arch: ${{ runner.os == 'Windows' && (matrix.arch == 'arm64' && 'win64_msvc2019_arm64' || 'win64_msvc2019_64') || '' }}
 
       - name: Set up MSVC (Windows)
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
 
       - name: Configure CMake
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
-            cmake --preset windows-msvc -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+            cmake --preset windows-msvc -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
           else
             cmake --preset release -DCMAKE_INSTALL_PREFIX=/usr
           fi
@@ -77,23 +95,39 @@ jobs:
           fi
         shell: bash
 
-      - name: Package (Linux DEB)
+      - name: Package (Linux DEB/RPM)
         if: runner.os == 'Linux'
         run: |
           cd build/release
           cpack -G DEB
+          cpack -G RPM
+        shell: bash
+
+      - name: Package (macOS DMG)
+        if: runner.os == 'macOS'
+        run: |
+          cd build/release
+          cpack -G DragNDrop
         shell: bash
 
       - name: Package (Linux AppImage)
         if: runner.os == 'Linux'
         run: |
+          # Detect architecture
+          RAW_ARCH=$(uname -m)
+          if [ "$RAW_ARCH" == "aarch64" ] || [ "$RAW_ARCH" == "arm64" ]; then
+            APPIMG_ARCH="aarch64"
+          else
+            APPIMG_ARCH="x86_64"
+          fi
+
           # Download tools
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          wget -q "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${APPIMG_ARCH}.AppImage"
+          wget -q "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-${APPIMG_ARCH}.AppImage"
           chmod +x linuxdeploy*.AppImage
 
           # Rename plugin for linuxdeploy to find it
-          mv linuxdeploy-plugin-qt-x86_64.AppImage linuxdeploy-plugin-qt.AppImage
+          mv "linuxdeploy-plugin-qt-${APPIMG_ARCH}.AppImage" linuxdeploy-plugin-qt.AppImage
 
           # Run packaging script
           export QMAKE=$(which qmake || which qmake6)
@@ -103,11 +137,13 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PixelBridge-${{ matrix.os }}
+          name: PixelBridge-${{ matrix.os }}-${{ matrix.arch }}
           path: |
             build/release/PixelBridge*
             build/release/*.exe
             build/release/*.deb
+            build/release/*.rpm
+            build/release/*.dmg
             build/release/*.AppImage
             PixelBridge*.AppImage
             build/windows-msvc/Release/PixelBridge.exe
