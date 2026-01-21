@@ -63,6 +63,17 @@ set(SOURCES
 
 add_executable(PixelBridge ${SOURCES})
 
+if(APPLE)
+    set_target_properties(PixelBridge PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME "PixelBridge"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.pixelbridge.app"
+        MACOSX_BUNDLE_INFO_STRING "Efficient Screen Capture and RTSP Server"
+        MACOSX_BUNDLE_LONG_VERSION_STRING "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+    )
+endif()
+
 target_link_libraries(PixelBridge
     PRIVATE
     FFmpeg::avformat
@@ -87,13 +98,14 @@ target_link_libraries(PixelBridge
 )
 
 if(WIN32)
-    target_link_libraries(PixelBridge psapi)
+    target_link_libraries(PixelBridge PRIVATE psapi)
 endif()
 
 # --- Installation ---
 include(GNUInstallDirs)
 
 install(TARGETS PixelBridge
+    BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
@@ -110,21 +122,27 @@ endif()
 # --- CPack Configuration ---
 set(CPACK_PACKAGE_NAME "pixelbridge")
 set(CPACK_PACKAGE_VENDOR "PixelBridge")
-set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Efficient Screen Capture and RTSP Server")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/chuanshanjia/PixelBridge")
 
-set(CPACK_GENERATOR "DEB")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Chuanshanjia")
-set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
-set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+if(APPLE)
+    set(CPACK_GENERATOR "DragNDrop")
+    set(CPACK_DMG_VOLUME_NAME "PixelBridge")
+    set(CPACK_SYSTEM_NAME "macOS")
+elseif(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "DEB;RPM")
+    
+    # Debian specific
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Chuanshanjia")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    
+    # RPM specific
+    set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+    set(CPACK_RPM_PACKAGE_AUTOREQ ON)
+    set(CPACK_RPM_PACKAGE_GROUP "Applications/Multimedia")
+endif()
 
 include(CPack)
-
-# add_executable(bench_qt_capture tests/bench_qt_capture.cpp)
-# target_link_libraries(bench_qt_capture 
-#     Qt6::Core 
-#     Qt6::Gui 
-#     Qt6::Multimedia
-# )
