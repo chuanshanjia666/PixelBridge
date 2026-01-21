@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
     spdlog::set_level(spdlog::level::debug);
 
     QGuiApplication app(argc, argv);
+    spdlog::info("Running with platform: {}", qPrintable(app.platformName()));
     app.setWindowIcon(QIcon(":/assets/icons/pixelbridge.svg"));
 
     if (avformat_network_init() < 0)

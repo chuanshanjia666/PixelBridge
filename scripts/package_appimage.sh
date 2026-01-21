@@ -24,13 +24,22 @@ mkdir -p $APP_DIR
 # Use absolute path for DESTDIR to avoid confusion
 DESTDIR=$(pwd)/$APP_DIR cmake --build $BUILD_DIR --target install
 
+# Set Qt environment for linuxdeploy
+if [ -z "$QMAKE" ]; then
+    export QMAKE=$(which qmake6 || which qmake)
+fi
+export QT_VERSION=6
+export QT_PLUGIN_PATH=$( "$QMAKE" -query QT_INSTALL_PLUGINS )
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$( "$QMAKE" -query QT_INSTALL_LIBS )
+
 # Run linuxdeploy
 # export QMAKE=/usr/lib/qt6/bin/qmake # Adjust path if needed if not in PATH
 export VERSION=1.0.0
 # Tell the Qt plugin where to look for QML files to bundle dependencies
-export QML_SOURCES_PATHS="qml"
-# Force inclusion of wayland platform plugin for Wayland screen capture support
-export EXTRA_QT_PLUGINS="wayland;wayland-egl"
+export QML_SOURCES_PATHS="$(pwd)/qml"
+# Force inclusion of all necessary platform plugins and shell extensions
+# Using categories ensures that both wayland and xcb (and others) are included
+export EXTRA_QT_PLUGINS="platforms;imageformats;iconengines;wayland-shell-extensions;multimedia"
 
 # Fix for modern distributions (like Arch) where the bundled 'strip' in linuxdeploy
 # does not support the new SHT_RELR relocation format.

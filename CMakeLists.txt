@@ -12,6 +12,9 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia)
+if(UNIX AND NOT APPLE)
+    find_package(Qt6 COMPONENTS WaylandClient)
+endif()
 find_package(Threads REQUIRED)
 
 # --- Automatically download and include extra-cmake-modules (ECM) ---
@@ -96,6 +99,10 @@ target_link_libraries(PixelBridge
     OpenSSL::SSL
     OpenSSL::Crypto
 )
+
+if(Qt6WaylandClient_FOUND)
+    target_link_libraries(PixelBridge PRIVATE Qt6::WaylandClient)
+endif()
 
 if(WIN32)
     target_link_libraries(PixelBridge PRIVATE psapi)

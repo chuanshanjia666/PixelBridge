@@ -39,13 +39,17 @@ jobs:
             qt6-multimedia \
             qt6-shadertools \
             qt6-declarative \
+            qt6-svg \
             mesa \
             fuse2 \
             libxcb \
             wayland \
             libxkbcommon \
+            libxkbcommon-x11 \
             pipewire \
-            libportal
+            libportal \
+            libva \
+            libvdpau
 
       - name: Configure CMake
         run: |
