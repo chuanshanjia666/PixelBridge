@@ -15,11 +15,25 @@ if(UNIX)
         -DBSD=1
     )
 elseif(WIN32)
+    # Based on config.mingw and win32config
     add_definitions(
+        -DSOCKLEN_T=int
+        -DLOCALE_NOT_USED
+        -DNO_GETIFADDRS=1
+        -D_LITTLE_ENDIAN=1
+        -DNO_STRSTREAM=1
+        -DALLOW_RTSP_SERVER_PORT_REUSE=1
         -D_CRT_SECURE_NO_WARNINGS
         -D_WINSOCK_DEPRECATED_NO_WARNINGS
-        -DALLOW_RTSP_SERVER_PORT_REUSE=1
     )
+    
+    # MinGW or Clang in MSYS2 (UCRT64/ClangARM64)
+    if(MINGW OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT MSVC))
+        add_definitions(
+            -D__MINGW32__
+            -DUSE_OUR_BZERO=1
+        )
+    endif()
 endif()
 
 # 1. UsageEnvironment

@@ -20,10 +20,10 @@ jobs:
             arch: arm64
           - os: windows-latest
             arch: x64
-            vcpkg_triplet: x64-windows
+            sys: ucrt64
           - os: windows-latest
             arch: arm64
-            vcpkg_triplet: arm64-windows
+            sys: clangarm64
           - os: macos-13
             arch: x64
           - os: macos-latest
@@ -58,29 +58,35 @@ jobs:
         run: |
           brew install ffmpeg spdlog ninja pkg-config
 
-      - name: Install system dependencies (Windows)
+      - name: Set up MSYS2 (Windows x64 / ARM64 Native)
         if: runner.os == 'Windows'
-        run: |
-          choco install ninja pkgconfiglite
-          vcpkg install spdlog:${{ matrix.vcpkg_triplet }} ffmpeg:${{ matrix.vcpkg_triplet }}
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.sys }}
+          update: true
+          install: >-
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-gcc
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-cmake
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-ninja
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-pkg-config
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-ffmpeg
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-spdlog
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-base
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-multimedia
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-declarative
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-shadertools
 
-      - name: Install Qt
+      - name: Install Qt (Linux/macOS)
+        if: runner.os != 'Windows'
         uses: jurplel/install-qt-action@v3
         with:
           version: "6.5.3"
           modules: "qtmultimedia qtshadertools"
-          arch: ${{ runner.os == 'Windows' && (matrix.arch == 'arm64' && 'win64_msvc2019_arm64' || 'win64_msvc2019_64') || '' }}
-
-      - name: Set up MSVC (Windows)
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: ${{ matrix.arch }}
 
       - name: Configure CMake
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
-            cmake --preset windows-msvc -DCMAKE_TOOLCHAIN_FILE="$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
+            cmake -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
           else
             cmake --preset release -DCMAKE_INSTALL_PREFIX=/usr
           fi
@@ -89,7 +95,7 @@ jobs:
       - name: Build
         run: |
           if [ "${{ runner.os }}" == "Windows" ]; then
-            cmake --build --preset windows-msvc --parallel
+            cmake --build build/release --parallel
           else
             cmake --build --preset release --parallel
           fi
@@ -146,4 +152,3 @@ jobs:
             build/release/*.dmg
             build/release/*.AppImage
             PixelBridge*.AppImage
-            build/windows-msvc/Release/PixelBridge.exe
