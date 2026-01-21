@@ -1,0 +1,71 @@
+name: Linux DEB/RPM Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-linux-dist:
+    name: Linux (${{ matrix.arch }}) DEB/RPM
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x64
+          - os: ubuntu-24.04-arm64
+            arch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            pkg-config \
+            libavformat-dev libavcodec-dev libavutil-dev libavdevice-dev libswscale-dev \
+            libspdlog-dev \
+            libgl1-mesa-dev \
+            libfuse2 \
+            libxcb-cursor0 \
+            libwayland-dev libxkbcommon-dev \
+            libpipewire-0.3-dev libportal-dev \
+            ninja-build \
+            rpm
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: "6.5.3"
+          modules: "qtmultimedia qtshadertools"
+
+      - name: Configure CMake
+        run: |
+          cmake --preset release -DCMAKE_INSTALL_PREFIX=/usr
+
+      - name: Build
+        run: |
+          cmake --build --preset release --parallel
+
+      - name: Package (DEB/RPM)
+        run: |
+          cd build/release
+          cpack -G DEB
+          cpack -G RPM
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PixelBridge-linux-dist-${{ matrix.arch }}
+          path: |
+            build/release/*.deb
+            build/release/*.rpm

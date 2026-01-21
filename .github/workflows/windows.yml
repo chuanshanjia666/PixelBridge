@@ -1,0 +1,80 @@
+name: Windows Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-windows:
+    name: Windows (${{ matrix.arch }}) Build
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            sys: ucrt64
+          - arch: arm64
+            sys: clangarm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.sys }}
+          update: true
+          install: >-
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-gcc
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-cmake
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-ninja
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-pkg-config
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-ffmpeg
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-spdlog
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-base
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-multimedia
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-declarative
+            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-shadertools
+
+      - name: Configure CMake
+        run: |
+          cmake -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cmake --build build/release --parallel
+
+      - name: Package (ZIP)
+        run: |
+          # Use windeployqt to copy dependencies
+          EXE_PATH="build/release/PixelBridge.exe"
+
+          # MSYS2 windeployqt for Qt6 is usually windeployqt6
+          if command -v windeployqt6 >/dev/null 2>&1; then
+            WINDEPLOYQT="windeployqt6"
+          else
+            WINDEPLOYQT="windeployqt"
+          fi
+
+          $WINDEPLOYQT --release --no-translations --no-compiler-runtime --qmldir qml $EXE_PATH
+
+          # Now package
+          cd build/release
+          cpack -G ZIP
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PixelBridge-windows-${{ matrix.arch }}
+          path: |
+            build/release/*.zip
+            build/release/*.exe

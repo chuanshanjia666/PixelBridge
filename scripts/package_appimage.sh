@@ -7,7 +7,14 @@ BUILD_DIR="build/release"
 APP_DIR="AppDir"
 
 # Tools (Assumed to be downloaded by Workflow/CI)
-LINUXDEPLOY="./linuxdeploy-x86_64.AppImage"
+if [ -f "./linuxdeploy-x86_64.AppImage" ]; then
+    LINUXDEPLOY="./linuxdeploy-x86_64.AppImage"
+elif [ -f "./linuxdeploy-aarch64.AppImage" ]; then
+    LINUXDEPLOY="./linuxdeploy-aarch64.AppImage"
+else
+    # Fallback to PATH
+    LINUXDEPLOY="linuxdeploy"
+fi
 
 # Clean up and prepare AppDir
 rm -rf $APP_DIR

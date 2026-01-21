@@ -1,0 +1,55 @@
+name: macOS Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-macos:
+    name: macOS (arm64) Build
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          brew install ffmpeg spdlog ninja pkg-config
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: "6.5.3"
+          modules: "qtmultimedia qtshadertools"
+
+      - name: Configure CMake
+        run: |
+          cmake --preset release
+
+      - name: Build
+        run: |
+          cmake --build --preset release --parallel
+
+      - name: Package (DMG)
+        run: |
+          # Use macdeployqt to bundle dependencies
+          BUNDLE_PATH="build/release/PixelBridge.app"
+
+          # macdeployqt is usually in the Qt bin dir
+          macdeployqt $BUNDLE_PATH -dmg -qmldir=qml
+
+          # Rename for clarity
+          mv build/release/PixelBridge.dmg build/release/PixelBridge-macOS-arm64.dmg || true
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PixelBridge-macos-arm64
+          path: |
+            build/release/*.dmg
+            build/release/PixelBridge.app
