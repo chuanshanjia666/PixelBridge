@@ -42,7 +42,6 @@ jobs:
             qt6-multimedia \
             qt6-shadertools \
             qt6-declarative \
-            qt6-quickcontrols2 \
             mesa \
             fuse2 \
             libxcb \

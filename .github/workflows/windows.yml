@@ -19,8 +19,6 @@ jobs:
         include:
           - arch: x64
             sys: ucrt64
-          - arch: arm64
-            sys: clangarm64
 
     steps:
       - name: Checkout code
@@ -34,16 +32,17 @@ jobs:
           msystem: ${{ matrix.sys }}
           update: true
           install: >-
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-gcc
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-cmake
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-ninja
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-pkg-config
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-ffmpeg
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-spdlog
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-base
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-multimedia
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-declarative
-            ${{ matrix.sys == 'ucrt64' && 'mingw-w64-ucrt-x86_64' || 'mingw-w64-clang-aarch64' }}-qt6-shadertools
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-ffmpeg
+            mingw-w64-ucrt-x86_64-spdlog
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-multimedia
+            mingw-w64-ucrt-x86_64-qt6-declarative
+            mingw-w64-ucrt-x86_64-qt6-shadertools
+            mingw-w64-ucrt-x86_64-qt6-translations
 
       - name: Configure CMake
         run: |
@@ -55,10 +54,11 @@ jobs:
 
       - name: Package (ZIP)
         run: |
-          # Use windeployqt to copy dependencies
+          # Ensure Qt helper tools are in PATH for windeployqt
+          export PATH=$MSYSTEM_PREFIX/lib/qt6/bin:$PATH
+
           EXE_PATH="build/release/PixelBridge.exe"
 
-          # MSYS2 windeployqt for Qt6 is usually windeployqt6
           if command -v windeployqt6 >/dev/null 2>&1; then
             WINDEPLOYQT="windeployqt6"
           else
