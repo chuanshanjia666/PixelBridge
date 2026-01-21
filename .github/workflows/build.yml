@@ -24,8 +24,6 @@ jobs:
           - os: windows-latest
             arch: arm64
             sys: clangarm64
-          - os: macos-13
-            arch: x64
           - os: macos-latest
             arch: arm64
 
@@ -90,7 +88,7 @@ jobs:
           else
             cmake --preset release -DCMAKE_INSTALL_PREFIX=/usr
           fi
-        shell: bash
+        shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
 
       - name: Build
         run: |
@@ -99,7 +97,7 @@ jobs:
           else
             cmake --build --preset release --parallel
           fi
-        shell: bash
+        shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
 
       - name: Package (Linux DEB/RPM)
         if: runner.os == 'Linux'
@@ -108,6 +106,13 @@ jobs:
           cpack -G DEB
           cpack -G RPM
         shell: bash
+
+      - name: Package (Windows EXE)
+        if: runner.os == 'Windows'
+        run: |
+          cd build/release
+          cpack -G ZIP
+        shell: msys2 {0}
 
       - name: Package (macOS DMG)
         if: runner.os == 'macOS'
