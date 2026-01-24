@@ -3,6 +3,7 @@ name: Linux DEB/RPM Build
 on:
   push:
     branches: [main, master]
+    tags: ["v*"]
   pull_request:
     branches: [main, master]
 
@@ -67,5 +68,13 @@ jobs:
         with:
           name: PixelBridge-linux-dist-${{ matrix.arch }}-v${{ steps.package.outputs.version }}
           path: |
+            build/release/*.deb
+            build/release/*.rpm
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
             build/release/*.deb
             build/release/*.rpm

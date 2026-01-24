@@ -3,6 +3,7 @@ name: AppImage Build
 on:
   push:
     branches: [main, master]
+    tags: ["v*"]
   pull_request:
     branches: [main, master]
 
@@ -60,6 +61,7 @@ jobs:
           cmake --build --preset release --parallel
 
       - name: Package (AppImage)
+        id: package
         run: |
           # Detect architecture
           RAW_ARCH=$(uname -m)
@@ -68,6 +70,10 @@ jobs:
           else
             APPIMG_ARCH="x86_64"
           fi
+
+          # Read version
+          PIXELBRIDGE_VERSION=$(cat VERSION | tr -d '\n\r')
+          echo "version=$PIXELBRIDGE_VERSION" >> $GITHUB_OUTPUT
 
           # Arch Linux environment settings for AppImage tools
           export APPIMAGE_EXTRACT_AND_RUN=1
@@ -87,6 +93,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PixelBridge-appimage-${{ matrix.arch }}
+          name: PixelBridge-appimage-${{ matrix.arch }}-v${{ steps.package.outputs.version }}
           path: |
             PixelBridge*.AppImage
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: PixelBridge*.AppImage
