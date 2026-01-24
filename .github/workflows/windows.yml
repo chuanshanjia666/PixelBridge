@@ -63,38 +63,47 @@ jobs:
           find $MSYSTEM_PREFIX -name "qmlimportscanner.exe"
           echo "PATH is: $PATH"
 
-      - name: Package (ZIP)
+      - name: Bundle runtime and package
         run: |
+          set -e
+
           # Ensure Qt helper tools are in PATH for windeployqt
-          # Use cygpath to get the absolute Windows path for the bin directories
           QT_BIN_DIR=$(cygpath -u "$MSYSTEM_PREFIX/bin")
           QT_HELPER_DIR=$(cygpath -u "$MSYSTEM_PREFIX/lib/qt6/bin")
-
-          # Add to PATH (MSYS2 bash style)
           export PATH="$QT_BIN_DIR:$QT_HELPER_DIR:$PATH"
-
-          # Also set QMAKE environment variable
           export QMAKE="$QT_BIN_DIR/qmake6.exe"
 
-          EXE_PATH="build/release/PixelBridge.exe"
+          # Install to a staging directory first
+          STAGE_DIR="$PWD/build/package"
+          cmake --install build/release --prefix "$STAGE_DIR"
 
-          # Use absolute Windows paths for windeployqt
-          # windeployqt6 is a native Windows app, so it's better to give it Windows paths
+          EXE_PATH="$STAGE_DIR/bin/PixelBridge.exe"
+
+          # windeployqt is a native Windows tool; feed it Windows paths
           WINDEPLOYQT_EXE=$(cygpath -w "$QT_BIN_DIR/windeployqt6.exe")
-          QML_DIR=$(cygpath -w "qml")
-          TARGET_EXE=$(cygpath -w "$EXE_PATH")
+          QML_DIR_WIN=$(cygpath -w "$PWD/qml")
+          TARGET_EXE_WIN=$(cygpath -w "$EXE_PATH")
+          STAGE_BIN_WIN=$(cygpath -w "$STAGE_DIR/bin")
 
           echo "Using windeployqt from: $WINDEPLOYQT_EXE"
-          echo "Scanning QML from: $QML_DIR"
+          echo "Staging to: $STAGE_BIN_WIN"
 
-          # Now package
-          cd build/release
-          cpack -G ZIP
+          "$WINDEPLOYQT_EXE" --verbose 1 --qmldir "$QML_DIR_WIN" --dir "$STAGE_BIN_WIN" "$TARGET_EXE_WIN"
+
+          # Copy non-Qt runtime DLLs (FFmpeg/OpenSSL/spdlog) alongside the exe
+          STAGE_BIN_POSIX="$STAGE_DIR/bin"
+          for pattern in avcodec-*.dll avformat-*.dll avutil-*.dll avdevice-*.dll swscale-*.dll swresample-*.dll spdlog.dll libssl-*.dll libcrypto-*.dll; do
+            find "$MSYSTEM_PREFIX/bin" -maxdepth 1 -name "$pattern" -exec cp -u {} "$STAGE_BIN_POSIX" \;
+          done
+
+          # Create a zip from the staged install
+          cd "$STAGE_DIR"
+          cmake -E tar cf ../PixelBridge-windows-${{ matrix.arch }}.zip --format=zip .
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: PixelBridge-windows-${{ matrix.arch }}
           path: |
-            build/release/*.zip
-            build/release/*.exe
+            build/PixelBridge-windows-${{ matrix.arch }}.zip
+            build/package/bin/PixelBridge.exe
