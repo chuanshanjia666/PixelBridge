@@ -46,13 +46,13 @@ jobs:
             mingw-w64-ucrt-x86_64-qt6-tools
             mingw-w64-ucrt-x86_64-qt6-svg
 
-      - name: Configure CMake
+      - name: Configure CMake (preset)
         run: |
-          cmake -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --preset=ucrt64
 
-      - name: Build
+      - name: Build (preset)
         run: |
-          cmake --build build/release --parallel
+          cmake --build --preset=ucrt64 --parallel
 
       - name: Debug PATH and Tool Locations
         run: |
@@ -67,15 +67,15 @@ jobs:
         run: |
           set -e
 
-          # Ensure Qt helper tools are in PATH for windeployqt
+          # Ensure Qt helper tools (including qmlimportscanner) are in PATH for windeployqt
           QT_BIN_DIR=$(cygpath -u "$MSYSTEM_PREFIX/bin")
-          QT_HELPER_DIR=$(cygpath -u "$MSYSTEM_PREFIX/lib/qt6/bin")
+          QT_HELPER_DIR=$(cygpath -u "$MSYSTEM_PREFIX/share/qt6/bin")
           export PATH="$QT_BIN_DIR:$QT_HELPER_DIR:$PATH"
           export QMAKE="$QT_BIN_DIR/qmake6.exe"
 
           # Install to a staging directory first
           STAGE_DIR="$PWD/build/package"
-          cmake --install build/release --prefix "$STAGE_DIR"
+          cmake --install build/ucrt64 --prefix "$STAGE_DIR"
 
           EXE_PATH="$STAGE_DIR/bin/PixelBridge.exe"
 
@@ -88,7 +88,7 @@ jobs:
           echo "Using windeployqt from: $WINDEPLOYQT_EXE"
           echo "Staging to: $STAGE_BIN_WIN"
 
-          "$WINDEPLOYQT_EXE" --verbose 1 --qmldir "$QML_DIR_WIN" --dir "$STAGE_BIN_WIN" "$TARGET_EXE_WIN"
+          "$WINDEPLOYQT_EXE" --verbose 1 --qmldir "$QML_DIR_WIN" --no-translations --no-opengl-sw "$TARGET_EXE_WIN"
 
           # Copy non-Qt runtime DLLs (FFmpeg/OpenSSL/spdlog) alongside the exe
           STAGE_BIN_POSIX="$STAGE_DIR/bin"

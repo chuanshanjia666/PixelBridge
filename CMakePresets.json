@@ -36,6 +36,17 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "ucrt64",
+      "displayName": "MSYS2 UCRT64 Release",
+      "description": "专用于 MSYS2 UCRT64 环境的 Release 构建，输出到 build/ucrt64，安装到 build/package。",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/ucrt64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/package"
+      }
     }
   ],
   "buildPresets": [
@@ -50,6 +61,10 @@
     {
       "name": "windows-msvc",
       "configurePreset": "windows-msvc"
+    },
+    {
+      "name": "ucrt64",
+      "configurePreset": "ucrt64"
     }
   ],
   "testPresets": [
