@@ -6,7 +6,8 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [main, master]
-
+permissions:
+  contents: write
 jobs:
   build-appimage:
     name: AppImage (${{ matrix.arch }}) Build
