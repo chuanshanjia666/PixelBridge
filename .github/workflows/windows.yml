@@ -3,11 +3,9 @@ name: Windows Build
 on:
   push:
     branches: [main, master]
-    tags: ["v*"]
   pull_request:
     branches: [main, master]
-permissions:
-  contents: write
+
 jobs:
   build-windows:
     name: Windows (${{ matrix.arch }}) Build
@@ -114,11 +112,3 @@ jobs:
           path: |
             build/PixelBridge-windows-${{ matrix.arch }}-v${{ steps.bundle.outputs.version }}.zip
             build/package/bin/PixelBridge.exe
-
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: build/PixelBridge-windows-${{ matrix.arch }}-v${{ steps.bundle.outputs.version }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -3,11 +3,9 @@ name: AppImage Build
 on:
   push:
     branches: [main, master]
-    tags: ["v*"]
   pull_request:
     branches: [main, master]
-permissions:
-  contents: write
+
 jobs:
   build-appimage:
     name: AppImage (${{ matrix.arch }}) Build
@@ -97,11 +95,3 @@ jobs:
           name: PixelBridge-appimage-${{ matrix.arch }}-v${{ steps.package.outputs.version }}
           path: |
             PixelBridge*.AppImage
-
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: PixelBridge*.AppImage
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
