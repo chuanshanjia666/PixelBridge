@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.14)
-project(PixelBridge VERSION 0.1.0)
+
+# Read version from VERSION file
+file(READ VERSION PIXELBRIDGE_VERSION_RAW)
+string(STRIP "${PIXELBRIDGE_VERSION_RAW}" PIXELBRIDGE_VERSION)
+
+project(PixelBridge VERSION ${PIXELBRIDGE_VERSION})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -45,6 +50,10 @@ find_package(spdlog REQUIRED)
 add_subdirectory(thirdparty)
 
 include_directories(include)
+include_directories(${CMAKE_BINARY_DIR}/include)
+
+# Configure version header
+configure_file(${CMAKE_SOURCE_DIR}/include/core/Version.h.in ${CMAKE_BINARY_DIR}/include/core/Version.h)
 
 set(SOURCES
     src/main.cpp

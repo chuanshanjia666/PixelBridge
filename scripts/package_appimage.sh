@@ -36,7 +36,8 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$( "$QMAKE" -query QT_INSTALL_LIBS )
 
 # Run linuxdeploy
 # export QMAKE=/usr/lib/qt6/bin/qmake # Adjust path if needed if not in PATH
-export VERSION=1.0.0
+VERSION=$(cat VERSION | tr -d '\n\r')
+export VERSION
 # Tell the Qt plugin where to look for QML files to bundle dependencies
 export QML_SOURCES_PATHS="$(pwd)/qml"
 # Force inclusion of all necessary platform plugins and shell extensions

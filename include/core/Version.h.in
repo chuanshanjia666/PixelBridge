@@ -1,0 +1,3 @@
+#pragma once
+
+#define PIXELBRIDGE_VERSION "@PIXELBRIDGE_VERSION@"

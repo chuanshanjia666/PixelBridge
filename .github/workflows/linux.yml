@@ -54,7 +54,10 @@ jobs:
           cmake --build --preset release --parallel
 
       - name: Package (DEB/RPM)
+        id: package
         run: |
+          PIXELBRIDGE_VERSION=$(cat VERSION | tr -d '\n\r')
+          echo "version=$PIXELBRIDGE_VERSION" >> $GITHUB_OUTPUT
           cd build/release
           cpack -G DEB
           cpack -G RPM
@@ -62,7 +65,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PixelBridge-linux-dist-${{ matrix.arch }}
+          name: PixelBridge-linux-dist-${{ matrix.arch }}-v${{ steps.package.outputs.version }}
           path: |
             build/release/*.deb
             build/release/*.rpm

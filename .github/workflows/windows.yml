@@ -64,8 +64,13 @@ jobs:
           echo "PATH is: $PATH"
 
       - name: Bundle runtime and package
+        id: bundle
         run: |
           set -e
+
+          # Read version from VERSION file
+          PIXELBRIDGE_VERSION=$(cat VERSION | tr -d '\n\r')
+          echo "version=$PIXELBRIDGE_VERSION" >> $GITHUB_OUTPUT
 
           # Ensure Qt helper tools (including qmlimportscanner) are in PATH for windeployqt
           QT_BIN_DIR=$(cygpath -u "$MSYSTEM_PREFIX/bin")
@@ -98,12 +103,12 @@ jobs:
 
           # Create a zip from the staged install
           cd "$STAGE_DIR"
-          cmake -E tar cf ../PixelBridge-windows-${{ matrix.arch }}.zip --format=zip .
+          cmake -E tar cf ../PixelBridge-windows-${{ matrix.arch }}-v${PIXELBRIDGE_VERSION}.zip --format=zip .
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PixelBridge-windows-${{ matrix.arch }}
+          name: PixelBridge-windows-${{ matrix.arch }}-v${{ steps.bundle.outputs.version }}
           path: |
-            build/PixelBridge-windows-${{ matrix.arch }}.zip
+            build/PixelBridge-windows-${{ matrix.arch }}-v${{ steps.bundle.outputs.version }}.zip
             build/package/bin/PixelBridge.exe

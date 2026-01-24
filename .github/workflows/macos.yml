@@ -36,7 +36,10 @@ jobs:
           cmake --build --preset release --parallel
 
       - name: Package (DMG)
+        id: package
         run: |
+          PIXELBRIDGE_VERSION=$(cat VERSION | tr -d '\n\r')
+          echo "version=$PIXELBRIDGE_VERSION" >> $GITHUB_OUTPUT
           # Use macdeployqt to bundle dependencies
           BUNDLE_PATH="build/release/PixelBridge.app"
 
@@ -44,12 +47,12 @@ jobs:
           macdeployqt $BUNDLE_PATH -dmg -qmldir=qml
 
           # Rename for clarity
-          mv build/release/PixelBridge.dmg build/release/PixelBridge-macOS-arm64.dmg || true
+          mv build/release/PixelBridge.dmg build/release/PixelBridge-macOS-arm64-v${PIXELBRIDGE_VERSION}.dmg || true
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PixelBridge-macos-arm64
+          name: PixelBridge-macos-arm64-v${{ steps.package.outputs.version }}
           path: |
             build/release/*.dmg
             build/release/PixelBridge.app
