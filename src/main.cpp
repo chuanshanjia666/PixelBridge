@@ -8,6 +8,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QDir>
 
 #include "core/Bridge.h"
 #include "core/Logger.h"
@@ -26,6 +27,7 @@ extern "C"
 
 int main(int argc, char *argv[])
 {
+
     auto qmlSink = std::make_shared<QmlLogSinkMt>();
     auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
@@ -34,6 +36,17 @@ int main(int argc, char *argv[])
     spdlog::set_level(spdlog::level::debug);
 
     QGuiApplication app(argc, argv);
+
+    // 创建 QGuiApplication 后再设置环境变量
+    QString exeDir;
+#if defined(Q_OS_WIN)
+    exeDir = QDir::toNativeSeparators(QCoreApplication::applicationDirPath());
+#else
+    exeDir = QCoreApplication::applicationDirPath();
+#endif
+    qputenv("QML2_IMPORT_PATH", (exeDir + "/qml").toUtf8());
+    qputenv("QT_PLUGIN_PATH", (exeDir + "/plugins").toUtf8());
+
     spdlog::info("Running with platform: {}", qPrintable(app.platformName()));
     app.setWindowIcon(QIcon(":/assets/icons/pixelbridge.svg"));
 

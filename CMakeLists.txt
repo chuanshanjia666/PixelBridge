@@ -64,7 +64,11 @@ set(SOURCES
     resources.qrc
 )
 
-add_executable(PixelBridge ${SOURCES})
+if(WIN32)
+    add_executable(PixelBridge WIN32 ${SOURCES})
+else()
+    add_executable(PixelBridge ${SOURCES})
+endif()
 
 if(APPLE)
     set_target_properties(PixelBridge PROPERTIES
