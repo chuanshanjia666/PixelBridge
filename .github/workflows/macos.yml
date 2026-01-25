@@ -54,6 +54,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PixelBridge-macos-arm64-v${{ steps.package.outputs.version }}
-          path: |
-            build/release/*.dmg
-            build/release/PixelBridge.app
+          path: build/release/*.dmg
