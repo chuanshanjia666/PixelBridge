@@ -46,6 +46,7 @@ jobs:
             mingw-w64-ucrt-x86_64-qt6-translations
             mingw-w64-ucrt-x86_64-qt6-tools
             mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-ntldd-git
 
       - name: Configure CMake (preset)
         run: |
@@ -96,11 +97,32 @@ jobs:
 
           "$WINDEPLOYQT_EXE" --verbose 1 --qmldir "$QML_DIR_WIN" --no-translations --no-opengl-sw "$TARGET_EXE_WIN"
 
-          # Copy non-Qt runtime DLLs (FFmpeg/OpenSSL/spdlog) alongside the exe
+          # Copy non-Qt runtime DLLs (FFmpeg/OpenSSL/spdlog/MinGW runtime) alongside the exe
           STAGE_BIN_POSIX="$STAGE_DIR/bin"
-          for pattern in avcodec-*.dll avformat-*.dll avutil-*.dll avdevice-*.dll swscale-*.dll swresample-*.dll spdlog.dll libssl-*.dll libcrypto-*.dll; do
+          for pattern in avcodec-*.dll avformat-*.dll avutil-*.dll avdevice-*.dll swscale-*.dll swresample-*.dll spdlog.dll libssl-*.dll libcrypto-*.dll libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll; do
             find "$MSYSTEM_PREFIX/bin" -maxdepth 1 -name "$pattern" -exec cp -u {} "$STAGE_BIN_POSIX" \;
           done
+
+          # Auto-collect transitive non-system DLL dependencies from staged binaries.
+          # This avoids repeatedly patching the whitelist for newly introduced runtime libs.
+          DEP_LIST="$PWD/.pixelbridge_runtime_deps.txt"
+          : > "$DEP_LIST"
+          find "$STAGE_DIR" \( -iname "*.exe" -o -iname "*.dll" \) -print0 | while IFS= read -r -d '' bin; do
+            ntldd -R "$bin" 2>/dev/null | grep -oE "$MSYSTEM_PREFIX/bin/[^ )]+\\.dll" >> "$DEP_LIST" || true
+          done
+          sort -u "$DEP_LIST" | while IFS= read -r dep; do
+            [ -n "$dep" ] && cp -u "$dep" "$STAGE_BIN_POSIX" || true
+          done
+
+          # Fail packaging early if there are unresolved DLL dependencies.
+          MISSING_DLLS=$(find "$STAGE_DIR" \( -iname "*.exe" -o -iname "*.dll" \) -print0 | while IFS= read -r -d '' bin; do
+            ntldd -R "$bin" 2>/dev/null | grep -E "not found|=> not found" || true
+          done)
+          if [ -n "$MISSING_DLLS" ]; then
+            echo "Unresolved runtime dependencies detected:"
+            echo "$MISSING_DLLS"
+            exit 1
+          fi
 
           # Create a zip from the staged install
           cd "$STAGE_DIR"
