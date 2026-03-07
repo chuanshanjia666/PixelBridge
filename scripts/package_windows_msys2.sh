@@ -128,8 +128,8 @@ echo "All dependencies satisfied."
 echo "Creating distribution package..."
 ZIP_FILE="PixelBridge-windows-${ARCH}-v${PIXELBRIDGE_VERSION}.zip"
 (
-  cd "$STAGE_DIR"
-  cmake -E tar cf "../$ZIP_FILE" --format=zip .
+  cd "$STAGE_DIR/bin"
+  cmake -E tar cf "../../$ZIP_FILE" --format=zip .
 )
 
 if [ -f "build/$ZIP_FILE" ]; then
