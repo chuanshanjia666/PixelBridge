@@ -38,6 +38,7 @@ jobs:
             libwayland-dev libxkbcommon-dev \
             libpipewire-0.3-dev libportal-dev \
             ninja-build \
+            extra-cmake-modules \
             rpm
 
       - name: Install Qt

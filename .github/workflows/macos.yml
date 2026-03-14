@@ -20,7 +20,7 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          brew install ffmpeg spdlog ninja pkg-config
+          brew install ffmpeg spdlog ninja pkg-config extra-cmake-modules
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3

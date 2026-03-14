@@ -22,23 +22,23 @@ if(UNIX AND NOT APPLE)
 endif()
 find_package(Threads REQUIRED)
 
-# --- Automatically download and include extra-cmake-modules (ECM) ---
-include(FetchContent)
-FetchContent_Declare(
-    ecm
-    GIT_REPOSITORY https://github.com/KDE/extra-cmake-modules.git
-    GIT_TAG master
-)
+# # --- Automatically download and include extra-cmake-modules (ECM) ---
+# include(FetchContent)
+# FetchContent_Declare(
+#     ecm
+#     GIT_REPOSITORY https://github.com/KDE/extra-cmake-modules.git
+#     GIT_TAG master
+# )
 
-FetchContent_GetProperties(ecm)
-if(NOT ecm_POPULATED)
-    FetchContent_Populate(ecm)
-endif()
+# FetchContent_GetProperties(ecm)
+# if(NOT ecm_POPULATED)
+#     FetchContent_Populate(ecm)
+# endif()
 
-# We only need the modules, NOT to build the ECM project itself.
-# This avoids the Sphinx/documentation warnings.
-list(APPEND CMAKE_MODULE_PATH "${ecm_SOURCE_DIR}/find-modules")
-# ------------------------------------------------------------------
+# # We only need the modules, NOT to build the ECM project itself.
+# # This avoids the Sphinx/documentation warnings.
+# list(APPEND CMAKE_MODULE_PATH "${ecm_SOURCE_DIR}/find-modules")
+# # ------------------------------------------------------------------
 
 find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL AVDEVICE SWSCALE REQUIRED)
 
