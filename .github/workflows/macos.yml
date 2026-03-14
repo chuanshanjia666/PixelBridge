@@ -20,13 +20,13 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          brew install ffmpeg spdlog ninja pkg-config extra-cmake-modules
+          brew install ffmpeg spdlog ninja pkg-config extra-cmake-modules qt
 
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: "6.5.3"
-          modules: "qtmultimedia qtshadertools"
+      # - name: Install Qt
+      #   uses: jurplel/install-qt-action@v3
+      #   with:
+      #     version: "6.5.3"
+      #     modules: "qtmultimedia qtshadertools"
 
       - name: Configure CMake
         run: |
