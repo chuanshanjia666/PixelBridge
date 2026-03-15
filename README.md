@@ -86,13 +86,17 @@ Source -> Demux/ScreenCapture -> VideoDecoder -> (Tee) -> VideoEncoder -> Muxer/
 - CMake >= 3.14
 - C++20 编译器
 - Ninja（推荐）
-- Qt6：Core、Gui、Qml、Quick、QuickControls2、Multimedia
+- **Qt 6.5 或更高版本**：Core、Gui、Qml、Quick、QuickControls2、Multimedia
+  - `QScreenCapture`（屏幕捕获功能）从 Qt 6.5 开始引入；Qt < 6.5 时屏幕捕获功能将自动禁用，其余功能正常编译。
 - FFmpeg：avformat、avcodec、avutil、avdevice、swscale
 - OpenSSL
 - spdlog
 - Threads
 
-说明：live555 已随仓库提供并通过 thirdparty/CMakeLists.txt 构建静态库。
+说明：live555 以 git submodule 形式随仓库提供，CMakeLists.txt 会在首次 configure 时自动执行 `git submodule update --init`。也可手动运行：
+```bash
+git submodule update --init --recursive
+```
 
 ## 构建
 

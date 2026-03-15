@@ -9,6 +9,30 @@ project(PixelBridge VERSION ${PIXELBRIDGE_VERSION})
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Automatically initialize git submodules (e.g. thirdparty/live555) if the
+# source tree is a git repo and they haven't been checked out yet.
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/thirdparty/live555/liveMedia/include/liveMedia.hh")
+        message(STATUS "Initializing git submodules...")
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR
+                "git submodule update --init failed (exit ${GIT_SUBMOD_RESULT}). "
+                "Please run 'git submodule update --init --recursive' manually.")
+        endif()
+    endif()
+endif()
+
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/thirdparty/live555/liveMedia/include/liveMedia.hh")
+    message(FATAL_ERROR
+        "thirdparty/live555 submodule is not initialized. "
+        "Please run: git submodule update --init --recursive")
+endif()
+
 # Suppress AUTOMOC warnings for .hh files (common in live555)
 cmake_policy(SET CMP0100 NEW)
 
@@ -40,8 +64,6 @@ set(SOURCES
     include/core/Logger.h
     src/filters/Demuxer.cpp
     src/filters/VideoDecoder.cpp
-    src/filters/ScreenCapture.cpp
-    include/filters/ScreenCapture.h
     src/filters/VideoEncoder.cpp
     src/filters/Muxer.cpp
     src/filters/RtspServerFilter.cpp
@@ -49,6 +71,19 @@ set(SOURCES
     include/filters/QmlVideoSinkFilter.h
     resources.qrc
 )
+
+# QScreenCapture was introduced in Qt 6.5 and has no Android backend.
+# Only compile ScreenCapture when Qt >= 6.5 AND not targeting Android so that
+# MOC never sees the Q_OBJECT class on unsupported configurations.
+if(NOT ANDROID AND Qt6_VERSION VERSION_GREATER_EQUAL "6.5.0")
+    list(APPEND SOURCES
+        src/filters/ScreenCapture.cpp
+        include/filters/ScreenCapture.h
+    )
+    message(STATUS "QScreenCapture enabled (Qt ${Qt6_VERSION})")
+else()
+    message(STATUS "QScreenCapture disabled (Qt ${Qt6_VERSION}, Android=${ANDROID}): requires Qt >= 6.5 on non-Android")
+endif()
 
 if(WIN32)
     add_executable(PixelBridge WIN32 ${SOURCES})

@@ -1,8 +1,6 @@
-// Qt6 does not provide an Android backend for QScreenCapture (Qt Multimedia 6.x).
-// Screen capture on Android requires the system-level MediaProjection API and an
-// explicit user-consent dialog; Qt's cross-platform API does not abstract this yet.
-// Exclude the entire implementation on Android until an Android backend is available.
-#ifndef Q_OS_ANDROID
+// QScreenCapture was introduced in Qt 6.5 and has no Android backend.
+// Guard both conditions: Android AND Qt < 6.5, so the file compiles cleanly in both cases.
+#if !defined(Q_OS_ANDROID) && QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 #include "filters/ScreenCapture.h"
 #include <spdlog/spdlog.h>
 #include <QGuiApplication>
@@ -419,4 +417,4 @@ namespace pb
 
 } // namespace pb
 
-#endif // Q_OS_ANDROID
+#endif // !Q_OS_ANDROID && QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
