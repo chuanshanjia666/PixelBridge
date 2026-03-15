@@ -8,7 +8,7 @@ on:
     branches: [main, master]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-android:
@@ -32,7 +32,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -79,7 +79,7 @@ jobs:
             "qtbase:x64-linux" \
             "qtshadertools:x64-linux" \
             "qtdeclarative:x64-linux" \
-            "qtmultimedia:x64-linux"
+            "qtmultimedia[qml]:x64-linux"
 
       - name: Install Android Qt and dependencies via vcpkg
         env:
@@ -89,31 +89,53 @@ jobs:
             "qtbase:${{ matrix.vcpkg_triplet }}" \
             "qtshadertools:${{ matrix.vcpkg_triplet }}" \
             "qtdeclarative:${{ matrix.vcpkg_triplet }}" \
-            "qtmultimedia:${{ matrix.vcpkg_triplet }}" \
+            "qtmultimedia[qml]:${{ matrix.vcpkg_triplet }}" \
             "ffmpeg[core,swscale,avdevice,avformat,avcodec,avutil]:${{ matrix.vcpkg_triplet }}" \
             "openssl:${{ matrix.vcpkg_triplet }}" \
             "spdlog:${{ matrix.vcpkg_triplet }}"
 
-      - name: Configure CMake for Android
+      - name: Configure with CMake preset
         run: |
-          cmake -B build/android \
-            -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
-            -DVCPKG_TARGET_TRIPLET="${{ matrix.vcpkg_triplet }}" \
-            -DVCPKG_HOST_TRIPLET="x64-linux" \
-            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI="${{ matrix.abi }}" \
-            -DANDROID_PLATFORM="android-26" \
-            -DANDROID_STL="c++_shared" \
-            -DQT_HOST_PATH="$VCPKG_ROOT/installed/x64-linux" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -S .
+          cmake --preset android
 
-      - name: Build shared library
-        run: cmake --build build/android --parallel
+      - name: Build with CMake preset
+        run: cmake --build --preset android --parallel
 
       - name: Build APK
-        run: cmake --build build/android --target apk
+        run: cmake --build --preset android --target apk
+
+      - name: Sign release APK (tag builds)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_STORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "Android signing secrets are missing."
+            echo "Required: ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_STORE_PASSWORD, ANDROID_KEY_PASSWORD"
+            exit 1
+          fi
+
+          UNSIGNED_APK="build/android/android-build/build/outputs/apk/release/android-build-release-unsigned.apk"
+          SIGNED_APK="build/android/android-build/build/outputs/apk/release/android-build-release-signed.apk"
+          KEYSTORE_PATH="$RUNNER_TEMP/pixelbridge-upload.jks"
+
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+
+          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -n 1)
+          APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
+
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass "pass:$ANDROID_STORE_PASSWORD" \
+            --key-pass "pass:$ANDROID_KEY_PASSWORD" \
+            --out "$SIGNED_APK" \
+            "$UNSIGNED_APK"
+
+          "$APKSIGNER" verify --verbose "$SIGNED_APK"
 
       - name: Get version
         id: version
@@ -123,4 +145,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PixelBridge-android-${{ matrix.abi }}-v${{ steps.version.outputs.version }}
-          path: build/android/android-build/build/outputs/apk/**/*.apk
+          path: |
+            build/android/android-build/build/outputs/apk/release/android-build-release-unsigned.apk
+            build/android/android-build/build/outputs/apk/release/android-build-release-signed.apk
+          if-no-files-found: warn
+
+      - name: Publish signed APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            build/android/android-build/build/outputs/apk/release/android-build-release-signed.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

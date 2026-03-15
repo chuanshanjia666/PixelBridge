@@ -3,7 +3,13 @@ name: Unified Release
 on:
   workflow_run:
     workflows:
-      ["Windows Build", "Linux DEB/RPM Build", "macOS Build", "AppImage Build"]
+      [
+        "Windows Build",
+        "Linux DEB/RPM Build",
+        "macOS Build",
+        "AppImage Build",
+        "Android Build",
+      ]
     types: [completed]
 
 permissions:
@@ -23,7 +29,7 @@ jobs:
           path: ./artifacts
 
       - name: List downloaded files
-        run: find ./artifacts -type f -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.dmg" -o -name "*.AppImage"
+        run: find ./artifacts -type f \( -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.apk" \)
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -35,5 +41,6 @@ jobs:
             ./artifacts/**/*.deb
             ./artifacts/**/*.rpm
             ./artifacts/**/*.AppImage
+            ./artifacts/**/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
