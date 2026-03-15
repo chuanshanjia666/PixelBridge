@@ -45,55 +45,67 @@ jobs:
       - name: Install system build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build pkg-config
+          sudo apt-get install -y \
+            ninja-build pkg-config python3 perl \
+            libgl-dev libx11-dev libxext-dev \
+            libxcb1-dev libx11-xcb-dev libxcb-glx0-dev \
+            libxcb-util-dev libxcb-render-util0-dev \
+            libxcb-icccm4-dev libxcb-image0-dev \
+            libxcb-keysyms1-dev libxcb-randr0-dev \
+            libxcb-shape0-dev libxcb-sync-dev \
+            libxcb-xfixes0-dev libxcb-xkb-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev \
+            libfontconfig-dev libfreetype-dev
 
-      - name: Install Qt for host (required for moc/rcc cross-compilation tools)
-        uses: jurplel/install-qt-action@v3
+      - name: Export vcpkg binary cache environment variables
+        uses: actions/github-script@v7
         with:
-          version: '6.5.3'
-          target: 'desktop'
-          arch: 'linux_gcc_64'
-          modules: 'qtmultimedia qtshadertools'
-          dir: '${{ github.workspace }}/qt-host'
-          set-env: false
-
-      - name: Install Qt for Android (${{ matrix.abi }})
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: '6.5.3'
-          host: 'linux'
-          target: 'android'
-          arch: '${{ matrix.arch }}'
-          modules: 'qtmultimedia qtshadertools'
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
       - name: Setup vcpkg
         run: |
           git clone --depth 1 https://github.com/microsoft/vcpkg.git "${{ github.workspace }}/vcpkg"
           "${{ github.workspace }}/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=${{ github.workspace }}/vcpkg" >> $GITHUB_ENV
+          echo "VCPKG_BINARY_SOURCES=clear;x-gha,readwrite" >> $GITHUB_ENV
+          # x-gha uses GitHub Actions cache as a vcpkg binary cache, so Qt and other packages are
+          # cached between runs and don't need to be rebuilt from source every time.
 
-      - name: Install Android dependencies via vcpkg
+      - name: Install host Qt tools via vcpkg (required for moc/rcc cross-compilation)
+        run: |
+          "$VCPKG_ROOT/vcpkg" install \
+            "qtbase:x64-linux" \
+            "qtshadertools:x64-linux" \
+            "qtdeclarative:x64-linux" \
+            "qtmultimedia:x64-linux"
+
+      - name: Install Android Qt and dependencies via vcpkg
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
         run: |
           "$VCPKG_ROOT/vcpkg" install \
+            "qtbase:${{ matrix.vcpkg_triplet }}" \
+            "qtshadertools:${{ matrix.vcpkg_triplet }}" \
+            "qtdeclarative:${{ matrix.vcpkg_triplet }}" \
+            "qtmultimedia:${{ matrix.vcpkg_triplet }}" \
             "ffmpeg[core,swscale,avdevice,avformat,avcodec,avutil]:${{ matrix.vcpkg_triplet }}" \
             "openssl:${{ matrix.vcpkg_triplet }}" \
             "spdlog:${{ matrix.vcpkg_triplet }}"
 
       - name: Configure CMake for Android
         run: |
-          HOST_QT_DIR="${{ github.workspace }}/qt-host/Qt/6.5.3/gcc_64"
           cmake -B build/android \
             -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET="${{ matrix.vcpkg_triplet }}" \
+            -DVCPKG_HOST_TRIPLET="x64-linux" \
             -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI="${{ matrix.abi }}" \
             -DANDROID_PLATFORM="android-26" \
             -DANDROID_STL="c++_shared" \
-            -DQT_HOST_PATH="$HOST_QT_DIR" \
-            -DCMAKE_PREFIX_PATH="$Qt6_DIR/../.." \
+            -DQT_HOST_PATH="$VCPKG_ROOT/installed/x64-linux" \
             -DCMAKE_BUILD_TYPE=Release \
             -S .
 

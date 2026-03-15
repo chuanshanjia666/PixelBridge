@@ -120,36 +120,47 @@ cmake --build --preset ucrt64 -j
 前提条件：
 - Android SDK（API 26+）
 - Android NDK r26（`ndk;26.3.11579264`）
-- Qt 6.5.x for Android（`android_arm64_v8a`）+ Qt 6.5.x for Linux host（`linux_gcc_64`）
-- [vcpkg](https://github.com/microsoft/vcpkg)（用于获取 FFmpeg、OpenSSL、spdlog 的 Android 交叉编译版本）
-- Java 17+、Ninja
+- [vcpkg](https://github.com/microsoft/vcpkg)（用于获取 Qt、FFmpeg、OpenSSL、spdlog 的 Android 交叉编译版本）
+- Java 17+、Ninja、Python 3、Perl
 
 ```bash
-# 1. 安装 Android 交叉编译依赖（通过 vcpkg）
+# 1. 安装宿主机 Qt 工具链（用于 moc/rcc 交叉编译）
 export ANDROID_NDK_HOME=/path/to/ndk/26.3.11579264
-vcpkg install \
+export VCPKG_ROOT=/path/to/vcpkg
+"$VCPKG_ROOT/vcpkg" install \
+  "qtbase:x64-linux" \
+  "qtshadertools:x64-linux" \
+  "qtdeclarative:x64-linux" \
+  "qtmultimedia:x64-linux"
+
+# 2. 安装 Android 目标 Qt 及其他依赖
+"$VCPKG_ROOT/vcpkg" install \
+  "qtbase:arm64-android" \
+  "qtshadertools:arm64-android" \
+  "qtdeclarative:arm64-android" \
+  "qtmultimedia:arm64-android" \
   "ffmpeg[core,swscale,avdevice,avformat,avcodec,avutil]:arm64-android" \
   "openssl:arm64-android" \
   "spdlog:arm64-android"
 
-# 2. 配置（将路径替换为实际安装位置）
+# 3. 配置
 cmake -B build/android \
   -G Ninja \
-  -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake \
+  -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
   -DVCPKG_TARGET_TRIPLET=arm64-android \
-  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+  -DVCPKG_HOST_TRIPLET=x64-linux \
+  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
   -DANDROID_ABI=arm64-v8a \
   -DANDROID_PLATFORM=android-26 \
   -DANDROID_STL=c++_shared \
-  -DQT_HOST_PATH=/path/to/Qt/6.5.x/gcc_64 \
-  -DCMAKE_PREFIX_PATH=/path/to/Qt/6.5.x/android_arm64_v8a \
+  -DQT_HOST_PATH="$VCPKG_ROOT/installed/x64-linux" \
   -DCMAKE_BUILD_TYPE=Release \
   -S .
 
-# 3. 编译共享库
+# 4. 编译共享库
 cmake --build build/android --parallel
 
-# 4. 打包 APK
+# 5. 打包 APK
 cmake --build build/android --target apk
 ```
 
