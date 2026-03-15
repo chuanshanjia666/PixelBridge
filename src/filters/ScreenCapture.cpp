@@ -1,4 +1,7 @@
-// QScreenCapture is a desktop-only Qt feature; not available on Android.
+// Qt6 does not provide an Android backend for QScreenCapture (Qt Multimedia 6.x).
+// Screen capture on Android requires the system-level MediaProjection API and an
+// explicit user-consent dialog; Qt's cross-platform API does not abstract this yet.
+// Exclude the entire implementation on Android until an Android backend is available.
 #ifndef Q_OS_ANDROID
 #include "filters/ScreenCapture.h"
 #include <spdlog/spdlog.h>

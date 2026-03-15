@@ -1,7 +1,11 @@
 #ifndef SCREENCAPTURE_H
 #define SCREENCAPTURE_H
 
-// QScreenCapture is a desktop-only Qt feature; not available on Android.
+// Qt6 does not provide an Android backend for QScreenCapture (Qt Multimedia 6.x).
+// Screen capture on Android requires the system-level MediaProjection API, which
+// needs an explicit user-consent dialog and is outside Qt's cross-platform abstraction.
+// Until Qt ships an Android QScreenCapture backend, this entire class is excluded
+// on Android via the guard below.
 #ifndef Q_OS_ANDROID
 
 #include "core/Filter.h"

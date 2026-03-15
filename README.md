@@ -29,7 +29,7 @@ PixelBridge 是一个基于 Qt6 + FFmpeg + live555 的流媒体处理与播放�
 | 架构           | 系统    | 获取方式         |
 | -------------- | ------- | ---------------- |
 | x86_64         | windows | zip              |
-| x86_64         | linux   | Appiamge deb rpm |
+| x86_64         | linux   | AppImage deb rpm |
 | x86_64         | android | 自行编译         |
 | arm64          | windows | 自行编译         |
 | arm64          | linux   | 自行编译         |
@@ -152,12 +152,12 @@ cmake --build build/android --target apk
 
 产物路径：`build/android/android-build/build/outputs/apk/`
 
-> **注意**：屏幕采集（`screen:` 输入源）在 Android 上不可用，其余功能（播放 RTSP/文件、推流、内置 RTSP Server）均正常工作。
+> **注意**：屏幕采集（`screen:` 输入源）在 Android 上不可用。原因是 **Qt6 Multimedia 的 `QScreenCapture` 类没有 Android 后端实现**，该类目前仅支持 Windows / Linux（X11 或 Wayland via PipeWire）/ macOS。在 Android 上捕获屏幕需要调用系统级的 `MediaProjection` API，并弹出用户授权对话框，Qt 的跨平台抽象层尚未封装此流程。其余功能（播放 RTSP/文件、推流、内置 RTSP Server）均正常工作。
 
 ## TODO List
 
 - [ ] windows MSVC支持。
-- [x] Android 支持（MVP: Play/Push/Serve 可用，屏幕采集不支持）。
+- [x] Android 支持（MVP: Play/Push/Serve 可用；屏幕采集暂不支持，原因：Qt6 `QScreenCapture` 没有 Android 后端）。
 - [ ] 界面优化,增加更多配置选项。
 - [ ] RTMP支持。
 - [ ] 音频传输支持。

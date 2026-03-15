@@ -246,7 +246,10 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
             params = capture->getCodecParameters();
             src = capture;
 #else
-            spdlog::error("[Bridge] Screen capture is not supported on Android");
+            // Qt6 has no QScreenCapture backend for Android; MediaProjection API is needed.
+            spdlog::error("[Bridge] Screen capture (source='{}') is not supported on Android: "
+                          "Qt6 QScreenCapture has no Android backend. "
+                          "Use a network/file source instead.", sSource);
             return;
 #endif
         } else {
@@ -315,7 +318,10 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
             params = capture->getCodecParameters();
             src = capture;
 #else
-            spdlog::error("[Bridge] Screen capture is not supported on Android");
+            // Qt6 has no QScreenCapture backend for Android; MediaProjection API is needed.
+            spdlog::error("[Bridge] Screen capture (source='{}') is not supported on Android: "
+                          "Qt6 QScreenCapture has no Android backend. "
+                          "Use a network/file source instead.", sInput);
             return;
 #endif
         } else {
