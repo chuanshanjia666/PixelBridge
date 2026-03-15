@@ -57,7 +57,18 @@ jobs:
             libxkbcommon-dev libxkbcommon-x11-dev \
             libfontconfig-dev libfreetype-dev \
             autoconf autoconf-archive automake libtool \
-            libltdl-dev
+            libltdl-dev nasm \
+            build-essential \
+            cmake \
+            pkg-config \
+            libavformat-dev libavcodec-dev libavutil-dev libavdevice-dev libswscale-dev \
+            libspdlog-dev \
+            libgl1-mesa-dev \
+            libfuse2 \
+            libxcb-cursor0 \
+            libwayland-dev libxkbcommon-dev \
+            libpipewire-0.3-dev libportal-dev \
+            extra-cmake-modules \
 
       - name: Export vcpkg binary cache environment variables
         uses: actions/github-script@v7
