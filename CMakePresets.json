@@ -51,15 +51,15 @@
     {
       "name": "android",
       "displayName": "Android arm64-v8a Release",
-      "description": "Android APK build for arm64-v8a. Requires Qt 6.5+ via vcpkg (qtbase:arm64-android + qtbase:x64-linux for host tools), NDK r26+. Set ANDROID_NDK_HOME and VCPKG_ROOT before configuring.",
+      "description": "Android APK build for arm64-v8a. Requires Qt 6.5+ via vcpkg (qtbase:arm64-android + qtbase:x64-linux for host tools), NDK r26+, Android SDK Build-Tools. Set VCPKG_ROOT, ANDROID_NDK_HOME and ANDROID_SDK_ROOT before configuring.",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build/android",
-      "toolchainFile": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "ANDROID_ABI": "arm64-v8a",
-        "ANDROID_PLATFORM": "android-26",
+        "ANDROID_PLATFORM": "android-28",
         "ANDROID_STL": "c++_shared",
+        "ANDROID_SDK_ROOT": "$env{ANDROID_SDK_ROOT}",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "arm64-android",
         "VCPKG_HOST_TRIPLET": "x64-linux",

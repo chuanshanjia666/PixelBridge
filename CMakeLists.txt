@@ -45,7 +45,7 @@ if(UNIX AND NOT APPLE AND NOT ANDROID)
     find_package(Qt6 COMPONENTS WaylandClient)
 endif()
 find_package(Threads REQUIRED)
-find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL AVDEVICE SWSCALE REQUIRED)
+find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL AVDEVICE SWSCALE SWRESAMPLE REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(spdlog REQUIRED)
 
@@ -85,10 +85,15 @@ else()
     message(STATUS "QScreenCapture disabled (Android): screen capture requires the MediaProjection API")
 endif()
 
-if(WIN32)
-    add_executable(PixelBridge WIN32 ${SOURCES})
+if(ANDROID)
+    qt_add_executable(PixelBridge
+        MANUAL_FINALIZATION
+        ${SOURCES}
+    )
+elseif(WIN32)
+    qt_add_executable(PixelBridge WIN32 ${SOURCES})
 else()
-    add_executable(PixelBridge ${SOURCES})
+    qt_add_executable(PixelBridge ${SOURCES})
 endif()
 
 if(APPLE)
@@ -109,6 +114,7 @@ target_link_libraries(PixelBridge
     FFmpeg::avutil
     FFmpeg::avdevice
     FFmpeg::swscale
+    FFmpeg::swresample
     spdlog::spdlog
     liveMedia
     groupsock
@@ -134,16 +140,20 @@ if(WIN32)
 endif()
 
 if(ANDROID)
+    if(COMMAND qt_policy)
+        qt_policy(SET QTP0002 NEW)
+    endif()
+
     # Android-specific target properties for Qt APK packaging
     set_target_properties(PixelBridge PROPERTIES
         QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android"
-        QT_ANDROID_MIN_SDK_VERSION 26
+        QT_ANDROID_MIN_SDK_VERSION 28
         QT_ANDROID_TARGET_SDK_VERSION 34
+        QT_QML_ROOT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qml"
         QT_ANDROID_VERSION_CODE 1
         QT_ANDROID_VERSION_NAME "${PROJECT_VERSION}"
     )
-    qt_android_generate_deployment_settings(PixelBridge)
-    qt_android_add_apk_target(PixelBridge)
+    qt_finalize_executable(PixelBridge)
 endif()
 
 # --- Installation ---
@@ -152,6 +162,7 @@ include(GNUInstallDirs)
 install(TARGETS PixelBridge
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)

@@ -53,8 +53,10 @@ int main(int argc, char *argv[])
 #else
     exeDir = QCoreApplication::applicationDirPath();
 #endif
+#if !defined(Q_OS_ANDROID)
     qputenv("QML2_IMPORT_PATH", (exeDir + "/qml").toUtf8());
     qputenv("QT_PLUGIN_PATH", (exeDir + "/plugins").toUtf8());
+#endif
 
     spdlog::info("Running with platform: {}", qPrintable(app.platformName()));
     app.setWindowIcon(QIcon(":/assets/icons/pixelbridge.svg"));

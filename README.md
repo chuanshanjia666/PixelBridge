@@ -93,6 +93,7 @@ Source -> Demux/ScreenCapture -> VideoDecoder -> (Tee) -> VideoEncoder -> Muxer/
 - Threads
 
 说明：live555 以 git submodule 形式随仓库提供，CMakeLists.txt 会在首次 configure 时自动执行 `git submodule update --init`。也可手动运行：
+
 ```bash
 git submodule update --init --recursive
 ```
@@ -118,6 +119,7 @@ cmake --build --preset ucrt64 -j
 ### Android（arm64-v8a）
 
 前提条件：
+
 - Android SDK（API 26+）
 - Android NDK r26（`ndk;26.3.11579264`）
 - [vcpkg](https://github.com/microsoft/vcpkg)（用于获取 Qt、FFmpeg、OpenSSL、spdlog 的 Android 交叉编译版本）
@@ -162,9 +164,88 @@ cmake --build build/android --parallel
 
 # 5. 打包 APK
 cmake --build build/android --target apk
+
+# 6. 安装到设备
+# Debug 构建会生成可直接安装的 debug 包；Release 构建默认生成未签名包。
 ```
 
 产物路径：`build/android/android-build/build/outputs/apk/`
+
+### Android 安装说明
+
+如果执行 `adb install` 时出现：
+
+- `adb: no devices/emulators found`
+
+说明当前没有连接到 Android 设备，或设备没有开启 USB 调试。先用下面命令确认设备状态：
+
+```bash
+adb devices
+```
+
+如果执行 `adb install` 时出现：
+
+- `INSTALL_PARSE_FAILED_NO_CERTIFICATES`
+
+说明你安装的是未签名 APK。当前项目在 `Release` 构建下执行 `cmake --build build/android --target apk` 后，产物通常是：
+
+```text
+build/android/android-build/build/outputs/apk/release/android-build-release-unsigned.apk
+```
+
+这个文件不能直接安装，需要二选一：
+
+#### 方案 A：本地调试，直接生成 Debug APK
+
+```bash
+cmake -B build/android \
+  -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+  -DVCPKG_TARGET_TRIPLET=arm64-android \
+  -DVCPKG_HOST_TRIPLET=x64-linux \
+  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI=arm64-v8a \
+  -DANDROID_PLATFORM=android-26 \
+  -DANDROID_STL=c++_shared \
+  -DQT_HOST_PATH="$VCPKG_ROOT/installed/x64-linux" \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -S .
+
+cmake --build build/android --parallel
+cmake --build build/android --target apk
+
+adb install -r build/android/android-build/build/outputs/apk/debug/android-build-debug.apk
+```
+
+#### 方案 B：发布测试，给 Release APK 手动签名
+
+先生成一个 keystore（只需执行一次）：
+
+```bash
+keytool -genkeypair \
+  -v \
+  -keystore "$HOME/.android/pixelbridge-upload.jks" \
+  -alias pixelbridge \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000
+```
+
+然后对 release APK 签名：
+
+```bash
+apksigner sign \
+  --ks "$HOME/.android/pixelbridge-upload.jks" \
+  --ks-key-alias pixelbridge \
+  --out build/android/android-build/build/outputs/apk/release/android-build-release-signed.apk \
+  build/android/android-build/build/outputs/apk/release/android-build-release-unsigned.apk
+
+apksigner verify --verbose build/android/android-build/build/outputs/apk/release/android-build-release-signed.apk
+
+adb install -r build/android/android-build/build/outputs/apk/release/android-build-release-signed.apk
+```
+
+如果后续需要上架应用商店，建议改为使用正式发布 keystore，并妥善保管。
 
 > **注意**：屏幕采集（`screen:` 输入源）在 Android 上不可用。原因是 **Qt6 Multimedia 的 `QScreenCapture` 类没有 Android 后端实现**，该类目前仅支持 Windows / Linux（X11 或 Wayland via PipeWire）/ macOS。在 Android 上捕获屏幕需要调用系统级的 `MediaProjection` API，并弹出用户授权对话框，Qt 的跨平台抽象层尚未封装此流程。其余功能（播放 RTSP/文件、推流、内置 RTSP Server）均正常工作。
 
