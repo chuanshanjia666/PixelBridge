@@ -4,7 +4,7 @@
 #include "filters/VideoEncoder.h"
 #include "filters/RtspServerFilter.h"
 #include "filters/Muxer.h"
-#if !defined(Q_OS_ANDROID) && QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#if !defined(Q_OS_ANDROID)
 #include "filters/ScreenCapture.h"
 #endif
 #include <thread>
@@ -238,7 +238,7 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
         if (sSource.find("screen") == 0) {
-#if !defined(Q_OS_ANDROID) && QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#if !defined(Q_OS_ANDROID)
             std::string display = (sSource.find(":") != std::string::npos) ? sSource.substr(sSource.find(":") + 1) : ":1";
             auto capture = std::make_shared<pb::ScreenCapture>(display, fps);
             capture->setLatencyLevel(level);
@@ -246,9 +246,8 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
             params = capture->getCodecParameters();
             src = capture;
 #else
-            // QScreenCapture requires Qt >= 6.5 and has no Android backend (MediaProjection API needed).
-            spdlog::error("[Bridge] Screen capture (source='{}') is not supported: "
-                          "requires Qt >= 6.5 and is unavailable on Android. "
+            // Screen capture is unavailable on Android (requires the MediaProjection API).
+            spdlog::error("[Bridge] Screen capture (source='{}') is not supported on Android. "
                           "Use a network/file source instead.", sSource);
             return;
 #endif
@@ -310,7 +309,7 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
         if (sInput.find("screen") == 0) {
-#if !defined(Q_OS_ANDROID) && QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#if !defined(Q_OS_ANDROID)
             std::string display = (sInput.find(":") != std::string::npos) ? sInput.substr(sInput.find(":") + 1) : ":1";
             auto capture = std::make_shared<pb::ScreenCapture>(display, fps);
             capture->setLatencyLevel(level);
@@ -318,9 +317,8 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
             params = capture->getCodecParameters();
             src = capture;
 #else
-            // QScreenCapture requires Qt >= 6.5 and has no Android backend (MediaProjection API needed).
-            spdlog::error("[Bridge] Screen capture (source='{}') is not supported: "
-                          "requires Qt >= 6.5 and is unavailable on Android. "
+            // Screen capture is unavailable on Android (requires the MediaProjection API).
+            spdlog::error("[Bridge] Screen capture (source='{}') is not supported on Android. "
                           "Use a network/file source instead.", sInput);
             return;
 #endif

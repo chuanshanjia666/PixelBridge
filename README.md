@@ -87,7 +87,6 @@ Source -> Demux/ScreenCapture -> VideoDecoder -> (Tee) -> VideoEncoder -> Muxer/
 - C++20 编译器
 - Ninja（推荐）
 - **Qt 6.5 或更高版本**：Core、Gui、Qml、Quick、QuickControls2、Multimedia
-  - `QScreenCapture`（屏幕捕获功能）从 Qt 6.5 开始引入；Qt < 6.5 时屏幕捕获功能将自动禁用，其余功能正常编译。
 - FFmpeg：avformat、avcodec、avutil、avdevice、swscale
 - OpenSSL
 - spdlog

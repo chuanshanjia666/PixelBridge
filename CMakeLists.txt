@@ -40,7 +40,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia)
 if(UNIX AND NOT APPLE AND NOT ANDROID)
     find_package(Qt6 COMPONENTS WaylandClient)
 endif()
@@ -72,17 +72,17 @@ set(SOURCES
     resources.qrc
 )
 
-# QScreenCapture was introduced in Qt 6.5 and has no Android backend.
-# Only compile ScreenCapture when Qt >= 6.5 AND not targeting Android so that
-# MOC never sees the Q_OBJECT class on unsupported configurations.
-if(NOT ANDROID AND Qt6_VERSION VERSION_GREATER_EQUAL "6.5.0")
+# QScreenCapture has no Android backend — screen capture on Android requires the
+# system-level MediaProjection API which Qt's cross-platform layer does not wrap.
+# Exclude ScreenCapture from Android builds so MOC never sees the Q_OBJECT class.
+if(NOT ANDROID)
     list(APPEND SOURCES
         src/filters/ScreenCapture.cpp
         include/filters/ScreenCapture.h
     )
     message(STATUS "QScreenCapture enabled (Qt ${Qt6_VERSION})")
 else()
-    message(STATUS "QScreenCapture disabled (Qt ${Qt6_VERSION}, Android=${ANDROID}): requires Qt >= 6.5 on non-Android")
+    message(STATUS "QScreenCapture disabled (Android): screen capture requires the MediaProjection API")
 endif()
 
 if(WIN32)
