@@ -1,3 +1,6 @@
+// QScreenCapture has no Android backend — screen capture on Android requires the
+// system-level MediaProjection API which Qt's cross-platform layer does not wrap.
+#if !defined(Q_OS_ANDROID)
 #include "filters/ScreenCapture.h"
 #include <spdlog/spdlog.h>
 #include <QGuiApplication>
@@ -413,3 +416,5 @@ namespace pb
     }
 
 } // namespace pb
+
+#endif // !Q_OS_ANDROID

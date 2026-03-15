@@ -1,6 +1,10 @@
 #ifndef SCREENCAPTURE_H
 #define SCREENCAPTURE_H
 
+// QScreenCapture has no Android backend — screen capture on Android requires the
+// system-level MediaProjection API which Qt's cross-platform layer does not wrap.
+#if !defined(Q_OS_ANDROID)
+
 #include "core/Filter.h"
 #include <QObject>
 #include <QScreenCapture>
@@ -70,4 +74,5 @@ namespace pb
 
 } // namespace pb
 
+#endif // !Q_OS_ANDROID
 #endif // SCREENCAPTURE_H

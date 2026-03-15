@@ -1,0 +1,4 @@
+2026-03-15 03:40:18,114 - aqt.metadata - DEBUG - metadata 140381251436672 Connection to 'https://download.qt.io' failed. Retrying with fallback 'https://mirror.netcologne.de/qtproject/'.
+2026-03-15 03:40:21,122 - aqt.main - ERROR - installer 140381251436672 Failure to connect to https://mirror.netcologne.de/qtproject/online/qtsdkrepository/linux_x64/android/: ConnectionError
+2026-03-15 03:40:34,169 - aqt.metadata - DEBUG - metadata 139894368141440 Connection to 'https://download.qt.io' failed. Retrying with fallback 'https://ftp1.nluug.nl/languages/qt/'.
+2026-03-15 03:40:37,178 - aqt.main - ERROR - installer 139894368141440 Failure to connect to https://ftp1.nluug.nl/languages/qt/online/qtsdkrepository/linux_x64/android/: ConnectionError

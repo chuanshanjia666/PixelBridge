@@ -29,11 +29,11 @@ PixelBridge 是一个基于 Qt6 + FFmpeg + live555 的流媒体处理与播放�
 | 架构           | 系统    | 获取方式         |
 | -------------- | ------- | ---------------- |
 | x86_64         | windows | zip              |
-| x86_64         | linux   | Appiamge deb rpm |
-| x86_64         | android | 暂不支持         |
+| x86_64         | linux   | AppImage deb rpm |
+| x86_64         | android | 自行编译         |
 | arm64          | windows | 自行编译         |
 | arm64          | linux   | 自行编译         |
-| arm64          | android | 暂不支持         |
+| arm64          | android | 自行编译         |
 | arm64          | macos   | dmg              |
 | x86_i686/arm32 | -       | 自行编译         |
 
@@ -86,13 +86,16 @@ Source -> Demux/ScreenCapture -> VideoDecoder -> (Tee) -> VideoEncoder -> Muxer/
 - CMake >= 3.14
 - C++20 编译器
 - Ninja（推荐）
-- Qt6：Core、Gui、Qml、Quick、QuickControls2、Multimedia
+- **Qt 6.5 或更高版本**：Core、Gui、Qml、Quick、QuickControls2、Multimedia
 - FFmpeg：avformat、avcodec、avutil、avdevice、swscale
 - OpenSSL
 - spdlog
 - Threads
 
-说明：live555 已随仓库提供并通过 thirdparty/CMakeLists.txt 构建静态库。
+说明：live555 以 git submodule 形式随仓库提供，CMakeLists.txt 会在首次 configure 时自动执行 `git submodule update --init`。也可手动运行：
+```bash
+git submodule update --init --recursive
+```
 
 ## 构建
 
@@ -112,10 +115,63 @@ cmake --preset ucrt64
 cmake --build --preset ucrt64 -j
 ```
 
+### Android（arm64-v8a）
+
+前提条件：
+- Android SDK（API 26+）
+- Android NDK r26（`ndk;26.3.11579264`）
+- [vcpkg](https://github.com/microsoft/vcpkg)（用于获取 Qt、FFmpeg、OpenSSL、spdlog 的 Android 交叉编译版本）
+- Java 17+、Ninja、Python 3、Perl
+
+```bash
+# 1. 安装宿主机 Qt 工具链（用于 moc/rcc 交叉编译）
+export ANDROID_NDK_HOME=/path/to/ndk/26.3.11579264
+export VCPKG_ROOT=/path/to/vcpkg
+"$VCPKG_ROOT/vcpkg" install \
+  "qtbase:x64-linux" \
+  "qtshadertools:x64-linux" \
+  "qtdeclarative:x64-linux" \
+  "qtmultimedia:x64-linux"
+
+# 2. 安装 Android 目标 Qt 及其他依赖
+"$VCPKG_ROOT/vcpkg" install \
+  "qtbase:arm64-android" \
+  "qtshadertools:arm64-android" \
+  "qtdeclarative:arm64-android" \
+  "qtmultimedia:arm64-android" \
+  "ffmpeg[core,swscale,avdevice,avformat,avcodec,avutil]:arm64-android" \
+  "openssl:arm64-android" \
+  "spdlog:arm64-android"
+
+# 3. 配置
+cmake -B build/android \
+  -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+  -DVCPKG_TARGET_TRIPLET=arm64-android \
+  -DVCPKG_HOST_TRIPLET=x64-linux \
+  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+  -DANDROID_ABI=arm64-v8a \
+  -DANDROID_PLATFORM=android-26 \
+  -DANDROID_STL=c++_shared \
+  -DQT_HOST_PATH="$VCPKG_ROOT/installed/x64-linux" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -S .
+
+# 4. 编译共享库
+cmake --build build/android --parallel
+
+# 5. 打包 APK
+cmake --build build/android --target apk
+```
+
+产物路径：`build/android/android-build/build/outputs/apk/`
+
+> **注意**：屏幕采集（`screen:` 输入源）在 Android 上不可用。原因是 **Qt6 Multimedia 的 `QScreenCapture` 类没有 Android 后端实现**，该类目前仅支持 Windows / Linux（X11 或 Wayland via PipeWire）/ macOS。在 Android 上捕获屏幕需要调用系统级的 `MediaProjection` API，并弹出用户授权对话框，Qt 的跨平台抽象层尚未封装此流程。其余功能（播放 RTSP/文件、推流、内置 RTSP Server）均正常工作。
+
 ## TODO List
 
 - [ ] windows MSVC支持。
-- [ ] Android 支持。
+- [x] Android 支持（MVP: Play/Push/Serve 可用；屏幕采集暂不支持，原因：Qt6 `QScreenCapture` 没有 Android 后端）。
 - [ ] 界面优化,增加更多配置选项。
 - [ ] RTMP支持。
 - [ ] 音频传输支持。

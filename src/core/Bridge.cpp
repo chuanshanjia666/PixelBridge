@@ -4,7 +4,9 @@
 #include "filters/VideoEncoder.h"
 #include "filters/RtspServerFilter.h"
 #include "filters/Muxer.h"
+#if !defined(Q_OS_ANDROID)
 #include "filters/ScreenCapture.h"
+#endif
 #include <thread>
 #include <QUrl>
 #include <spdlog/spdlog.h>
@@ -236,12 +238,19 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
         if (sSource.find("screen") == 0) {
+#if !defined(Q_OS_ANDROID)
             std::string display = (sSource.find(":") != std::string::npos) ? sSource.substr(sSource.find(":") + 1) : ":1";
             auto capture = std::make_shared<pb::ScreenCapture>(display, fps);
             capture->setLatencyLevel(level);
             if (!capture->initialize()) return;
             params = capture->getCodecParameters();
             src = capture;
+#else
+            // Screen capture is unavailable on Android (requires the MediaProjection API).
+            spdlog::error("[Bridge] Screen capture (source='{}') is not supported on Android. "
+                          "Use a network/file source instead.", sSource);
+            return;
+#endif
         } else {
             auto demuxer = std::make_shared<pb::Demuxer>(sSource);
             demuxer->setLatencyLevel(level);
@@ -300,12 +309,19 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
         if (sInput.find("screen") == 0) {
+#if !defined(Q_OS_ANDROID)
             std::string display = (sInput.find(":") != std::string::npos) ? sInput.substr(sInput.find(":") + 1) : ":1";
             auto capture = std::make_shared<pb::ScreenCapture>(display, fps);
             capture->setLatencyLevel(level);
             if (!capture->initialize()) return;
             params = capture->getCodecParameters();
             src = capture;
+#else
+            // Screen capture is unavailable on Android (requires the MediaProjection API).
+            spdlog::error("[Bridge] Screen capture (source='{}') is not supported on Android. "
+                          "Use a network/file source instead.", sInput);
+            return;
+#endif
         } else {
             auto demuxer = std::make_shared<pb::Demuxer>(sInput);
             demuxer->setLatencyLevel(level);
