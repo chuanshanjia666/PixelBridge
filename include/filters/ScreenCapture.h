@@ -1,6 +1,9 @@
 #ifndef SCREENCAPTURE_H
 #define SCREENCAPTURE_H
 
+// QScreenCapture is a desktop-only Qt feature; not available on Android.
+#ifndef Q_OS_ANDROID
+
 #include "core/Filter.h"
 #include <QObject>
 #include <QScreenCapture>
@@ -70,4 +73,5 @@ namespace pb
 
 } // namespace pb
 
+#endif // Q_OS_ANDROID
 #endif // SCREENCAPTURE_H

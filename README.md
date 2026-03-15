@@ -30,10 +30,10 @@ PixelBridge 是一个基于 Qt6 + FFmpeg + live555 的流媒体处理与播放�
 | -------------- | ------- | ---------------- |
 | x86_64         | windows | zip              |
 | x86_64         | linux   | Appiamge deb rpm |
-| x86_64         | android | 暂不支持         |
+| x86_64         | android | 自行编译         |
 | arm64          | windows | 自行编译         |
 | arm64          | linux   | 自行编译         |
-| arm64          | android | 暂不支持         |
+| arm64          | android | 自行编译         |
 | arm64          | macos   | dmg              |
 | x86_i686/arm32 | -       | 自行编译         |
 
@@ -112,10 +112,52 @@ cmake --preset ucrt64
 cmake --build --preset ucrt64 -j
 ```
 
+### Android（arm64-v8a）
+
+前提条件：
+- Android SDK（API 26+）
+- Android NDK r26（`ndk;26.3.11579264`）
+- Qt 6.5.x for Android（`android_arm64_v8a`）+ Qt 6.5.x for Linux host（`linux_gcc_64`）
+- [vcpkg](https://github.com/microsoft/vcpkg)（用于获取 FFmpeg、OpenSSL、spdlog 的 Android 交叉编译版本）
+- Java 17+、Ninja
+
+```bash
+# 1. 安装 Android 交叉编译依赖（通过 vcpkg）
+export ANDROID_NDK_HOME=/path/to/ndk/26.3.11579264
+vcpkg install \
+  "ffmpeg[core,swscale,avdevice,avformat,avcodec,avutil]:arm64-android" \
+  "openssl:arm64-android" \
+  "spdlog:arm64-android"
+
+# 2. 配置（将路径替换为实际安装位置）
+cmake -B build/android \
+  -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake \
+  -DVCPKG_TARGET_TRIPLET=arm64-android \
+  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+  -DANDROID_ABI=arm64-v8a \
+  -DANDROID_PLATFORM=android-26 \
+  -DANDROID_STL=c++_shared \
+  -DQT_HOST_PATH=/path/to/Qt/6.5.x/gcc_64 \
+  -DCMAKE_PREFIX_PATH=/path/to/Qt/6.5.x/android_arm64_v8a \
+  -DCMAKE_BUILD_TYPE=Release \
+  -S .
+
+# 3. 编译共享库
+cmake --build build/android --parallel
+
+# 4. 打包 APK
+cmake --build build/android --target apk
+```
+
+产物路径：`build/android/android-build/build/outputs/apk/`
+
+> **注意**：屏幕采集（`screen:` 输入源）在 Android 上不可用，其余功能（播放 RTSP/文件、推流、内置 RTSP Server）均正常工作。
+
 ## TODO List
 
 - [ ] windows MSVC支持。
-- [ ] Android 支持。
+- [x] Android 支持（MVP: Play/Push/Serve 可用，屏幕采集不支持）。
 - [ ] 界面优化,增加更多配置选项。
 - [ ] RTMP支持。
 - [ ] 音频传输支持。

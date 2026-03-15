@@ -98,6 +98,19 @@ if(WIN32)
     target_link_libraries(PixelBridge PRIVATE psapi)
 endif()
 
+if(ANDROID)
+    # Android-specific target properties for Qt APK packaging
+    set_target_properties(PixelBridge PROPERTIES
+        QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android"
+        QT_ANDROID_MIN_SDK_VERSION 26
+        QT_ANDROID_TARGET_SDK_VERSION 34
+        QT_ANDROID_VERSION_CODE 1
+        QT_ANDROID_VERSION_NAME "${PROJECT_VERSION}"
+    )
+    qt_android_generate_deployment_settings(PixelBridge)
+    qt_android_add_apk_target(PixelBridge)
+endif()
+
 # --- Installation ---
 include(GNUInstallDirs)
 
