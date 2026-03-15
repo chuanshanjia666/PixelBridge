@@ -47,6 +47,24 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/package"
       }
+    },
+    {
+      "name": "android",
+      "displayName": "Android arm64-v8a Release",
+      "description": "Android APK build for arm64-v8a. Requires Qt 6.5+ for Android, NDK r26+, and vcpkg-provided FFmpeg/OpenSSL/spdlog. Set ANDROID_NDK_HOME, QT_HOST_PATH, Qt6_DIR, and VCPKG_ROOT before configuring.",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/android",
+      "toolchainFile": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-26",
+        "ANDROID_STL": "c++_shared",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "arm64-android",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+        "QT_HOST_PATH": "$env{QT_HOST_PATH}"
+      }
     }
   ],
   "buildPresets": [
@@ -65,6 +83,10 @@
     {
       "name": "ucrt64",
       "configurePreset": "ucrt64"
+    },
+    {
+      "name": "android",
+      "configurePreset": "android"
     }
   ],
   "testPresets": [

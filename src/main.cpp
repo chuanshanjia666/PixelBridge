@@ -16,7 +16,9 @@
 #include "filters/Demuxer.h"
 #include "filters/VideoDecoder.h"
 #include "filters/VideoSink.h"
+#if !defined(Q_OS_ANDROID) && QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 #include "filters/ScreenCapture.h"
+#endif
 #include "filters/VideoEncoder.h"
 #include "filters/Muxer.h"
 #include "filters/RtspServerFilter.h"

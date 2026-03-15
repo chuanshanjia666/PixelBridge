@@ -41,7 +41,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia)
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT ANDROID)
     find_package(Qt6 COMPONENTS WaylandClient)
 endif()
 find_package(Threads REQUIRED)
@@ -154,7 +154,7 @@ install(TARGETS PixelBridge
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT ANDROID)
     install(FILES assets/icons/pixelbridge.svg
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
         RENAME pixelbridge.svg
@@ -175,7 +175,7 @@ if(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
     set(CPACK_DMG_VOLUME_NAME "PixelBridge")
     set(CPACK_SYSTEM_NAME "macOS")
-elseif(UNIX AND NOT APPLE)
+elseif(UNIX AND NOT APPLE AND NOT ANDROID)
     set(CPACK_GENERATOR "DEB;RPM")
     
     # Debian specific
