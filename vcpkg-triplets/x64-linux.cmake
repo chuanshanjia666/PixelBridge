@@ -1,0 +1,7 @@
+set(VCPKG_TARGET_ARCHITECTURE x64)
+set(VCPKG_CXX_FLAGS "-fPIC")
+set(VCPKG_C_FLAGS "-fPIC")
+set(VCPKG_CMAKE_SYSTEM_NAME Linux)
+set(VCPKG_LIBRARY_LINKAGE static)
+# Only build release to save disk space on CI
+set(VCPKG_BUILD_TYPE release)

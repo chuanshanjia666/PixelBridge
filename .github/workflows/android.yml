@@ -23,6 +23,17 @@ jobs:
             vcpkg_triplet: arm64-android
 
     steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -90,6 +101,7 @@ jobs:
           "${{ github.workspace }}/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=${{ github.workspace }}/vcpkg" >> $GITHUB_ENV
           echo "VCPKG_BINARY_SOURCES=clear;x-gha,readwrite" >> $GITHUB_ENV
+          echo "VCPKG_OVERLAY_TRIPLETS=${{ github.workspace }}/vcpkg-triplets" >> $GITHUB_ENV
           # x-gha uses GitHub Actions cache as a vcpkg binary cache, so Qt and other packages are
           # cached between runs and don't need to be rebuilt from source every time.
 
@@ -98,6 +110,7 @@ jobs:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
         run: |
           "$VCPKG_ROOT/vcpkg" install \
+            --overlay-triplets="${{ github.workspace }}/vcpkg-triplets" \
             "qtbase:${{ matrix.vcpkg_triplet }}" \
             "qtshadertools:${{ matrix.vcpkg_triplet }}" \
             "qtdeclarative:${{ matrix.vcpkg_triplet }}" \
