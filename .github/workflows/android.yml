@@ -98,7 +98,7 @@ jobs:
             "qtshadertools:${{ matrix.vcpkg_triplet }}" \
             "qtdeclarative:${{ matrix.vcpkg_triplet }}" \
             "qtmultimedia[qml]:${{ matrix.vcpkg_triplet }}" \
-            "ffmpeg[core,swscale,avdevice,avformat,avcodec,avutil]:${{ matrix.vcpkg_triplet }}" \
+            "ffmpeg[core,swscale,avdevice,avformat,avcodec]:${{ matrix.vcpkg_triplet }}" \
             "openssl:${{ matrix.vcpkg_triplet }}" \
             "spdlog:${{ matrix.vcpkg_triplet }}"
 
