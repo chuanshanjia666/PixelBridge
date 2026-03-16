@@ -38,8 +38,10 @@ namespace pb
 
         // SwsContext for internal format conversion if input doesn't match
         SwsContext *m_swsContext = nullptr;
-        int m_swsWidth = 0;
-        int m_swsHeight = 0;
+        int m_swsSrcWidth = 0;
+        int m_swsSrcHeight = 0;
+        int m_swsDstWidth = 0;
+        int m_swsDstHeight = 0;
         AVPixelFormat m_swsInFmt = AV_PIX_FMT_NONE;
         AVPixelFormat m_swsOutFmt = AV_PIX_FMT_NONE;
     };

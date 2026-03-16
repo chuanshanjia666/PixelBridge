@@ -223,7 +223,7 @@ void Bridge::startPlay(const QString &url, const QString &hwType, int latencyLev
         .detach();
 }
 
-void Bridge::startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw, int fps, int latencyLevel, bool echo, const QString &address)
+void Bridge::startServe(const QString &source, int port, const QString &name, const QString &encoder, const QString &hw, int fps, int latencyLevel, bool echo, const QString &address, int outputWidth, int outputHeight)
 {
     stopAll();
     std::string sSource = source.toStdString();
@@ -233,7 +233,7 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
     std::string sAddr = address.toStdString();
     pb::LatencyLevel level = (pb::LatencyLevel)latencyLevel;
 
-    std::thread([this, sSource, port, sName, sEnc, sHw, fps, level, echo, sAddr]()
+    std::thread([this, sSource, port, sName, sEnc, sHw, fps, level, echo, sAddr, outputWidth, outputHeight]()
                 {
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
@@ -265,7 +265,9 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
 
         auto enc = std::make_shared<pb::VideoEncoder>(sEnc, sHw);
         enc->setLatencyLevel(level);
-        if (!enc->initialize(params->width, params->height, fps)) return;
+        int targetWidth = outputWidth > 0 ? outputWidth : params->width;
+        int targetHeight = outputHeight > 0 ? outputHeight : params->height;
+        if (!enc->initialize(targetWidth, targetHeight, fps)) return;
 
         auto server = std::make_shared<pb::RtspServerFilter>(port, sName, sAddr);
         server->setLatencyLevel(level);
@@ -295,7 +297,7 @@ void Bridge::startServe(const QString &source, int port, const QString &name, co
         .detach();
 }
 
-void Bridge::startPush(const QString &input, const QString &output, const QString &encoder, const QString &hw, int fps, int latencyLevel, bool echo)
+void Bridge::startPush(const QString &input, const QString &output, const QString &encoder, const QString &hw, int fps, int latencyLevel, bool echo, int outputWidth, int outputHeight)
 {
     stopAll();
     std::string sInput = input.toStdString();
@@ -304,7 +306,7 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
     std::string sHw = hw.toStdString();
     pb::LatencyLevel level = (pb::LatencyLevel)latencyLevel;
 
-    std::thread([this, sInput, sOutput, sEnc, sHw, fps, level, echo]()
+    std::thread([this, sInput, sOutput, sEnc, sHw, fps, level, echo, outputWidth, outputHeight]()
                 {
         std::shared_ptr<pb::Filter> src;
         AVCodecParameters *params = nullptr;
@@ -336,7 +338,9 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
 
         auto enc = std::make_shared<pb::VideoEncoder>(sEnc, sHw);
         enc->setLatencyLevel(level);
-        if (!enc->initialize(params->width, params->height, fps)) return;
+        int targetWidth = outputWidth > 0 ? outputWidth : params->width;
+        int targetHeight = outputHeight > 0 ? outputHeight : params->height;
+        if (!enc->initialize(targetWidth, targetHeight, fps)) return;
 
         auto muxer = std::make_shared<pb::Muxer>(sOutput);
         muxer->setLatencyLevel(level);

@@ -246,6 +246,28 @@ ScrollView {
                         }
                     }
 
+                    Label { text: "输出分辨率:"; color: window.colorSecondary; font.pixelSize: 14 }
+                    ComboBox {
+                        id: outputResolution
+                        model: [
+                            "跟随输入",
+                            "2560x1600",
+                            "2560x1440",
+                            "1920x1200",
+                            "1920x1080",
+                            "1600x900",
+                            "1280x720"
+                        ]
+                        currentIndex: 0
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 45
+                        font.pixelSize: 14
+                        leftPadding: 15
+                        palette.text: window.colorText
+                        palette.buttonText: window.colorText
+                        background: Rectangle { color: "#2a2a2a"; radius: 8; border.color: "#333" }
+                    }
+
                     Label { text: "延迟等级:"; color: window.colorSecondary; font.pixelSize: 14 }
                     ComboBox {
                         id: serveLatency
@@ -417,24 +439,33 @@ ScrollView {
                             let fps = serveFps.value
                             let lat = serveLatency.currentIndex
                             let echo = echoEnable.checked
+                            let outWidth = 0
+                            let outHeight = 0
+                            if (outputResolution.currentText !== "跟随输入") {
+                                let parts = outputResolution.currentText.split("x")
+                                if (parts.length === 2) {
+                                    outWidth = parseInt(parts[0])
+                                    outHeight = parseInt(parts[1])
+                                }
+                            }
                             if (protocolType.currentText === "RTSP Server") {
-                                bridge.startServe(serveSource.text, serverPort.value, serverStreamName.text, serveEnc.currentText, hw, fps, lat, echo, serverAddress.text)
+                                bridge.startServe(serveSource.text, serverPort.value, serverStreamName.text, serveEnc.currentText, hw, fps, lat, echo, serverAddress.text, outWidth, outHeight)
                             } else if (protocolType.currentText === "UDP Push") {
                                 let url = "udp://" + targetAddress.text + ":" + targetPort.value
                                 let opts = []
                                 if (localAddress.text !== "") opts.push("localaddr=" + localAddress.text)
                                 if (localPort.value !== 0) opts.push("localport=" + localPort.value)
                                 if (opts.length > 0) url += "?" + opts.join("&")
-                                bridge.startPush(serveSource.text, url, serveEnc.currentText, hw, fps, lat, echo)
+                                bridge.startPush(serveSource.text, url, serveEnc.currentText, hw, fps, lat, echo, outWidth, outHeight)
                             } else if (protocolType.currentText === "RTP Push") {
                                 let url = "rtp://" + targetAddress.text + ":" + targetPort.value
                                 let opts = []
                                 if (localAddress.text !== "") opts.push("localaddr=" + localAddress.text)
                                 if (localPort.value !== 0) opts.push("localport=" + localPort.value)
                                 if (opts.length > 0) url += "?" + opts.join("&")
-                                bridge.startPush(serveSource.text, url, serveEnc.currentText, hw, fps, lat, echo)
+                                bridge.startPush(serveSource.text, url, serveEnc.currentText, hw, fps, lat, echo, outWidth, outHeight)
                             } else if (protocolType.currentText === "RTSP Push") {
-                                bridge.startPush(serveSource.text, targetAddress.text, serveEnc.currentText, hw, fps, lat, echo)
+                                bridge.startPush(serveSource.text, targetAddress.text, serveEnc.currentText, hw, fps, lat, echo, outWidth, outHeight)
                             }
                             if (echo) window.switchToDisplay()
                         }

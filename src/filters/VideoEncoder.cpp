@@ -216,34 +216,47 @@ namespace pb
         std::shared_ptr<AVFrameWrapper> swFrameWrapper;
         std::shared_ptr<AVFrameWrapper> hwFrameWrapper;
 
-        // 1. If software format doesn't match and it's NOT a hardware frame yet
+        // 1. Convert and scale frame into encoder's expected software input format/size.
         AVPixelFormat targetSwFormat = m_hwDeviceCtx ? ((AVHWFramesContext *)m_hwFramesCtx->data)->sw_format : m_codecCtx->pix_fmt;
 
-        if (frame->format != targetSwFormat && frame->format != m_codecCtx->pix_fmt)
+        bool needConversion = (frame->format != targetSwFormat && frame->format != m_codecCtx->pix_fmt);
+        bool needScaling = (frame->width != m_codecCtx->width || frame->height != m_codecCtx->height);
+
+        if (needConversion || needScaling)
         {
             swFrameWrapper = std::make_shared<AVFrameWrapper>();
             AVFrame *swFrame = swFrameWrapper->get();
             swFrame->format = targetSwFormat;
-            swFrame->width = frame->width;
-            swFrame->height = frame->height;
+            swFrame->width = m_codecCtx->width;
+            swFrame->height = m_codecCtx->height;
             if (av_frame_get_buffer(swFrame, 32) < 0)
             {
                 spdlog::error("[VideoEncoder] Failed to allocate alignment buffer");
                 return;
             }
 
-            if (!m_swsContext || m_swsWidth != frame->width || m_swsHeight != frame->height || m_swsInFmt != frame->format || m_swsOutFmt != targetSwFormat)
+            if (!m_swsContext ||
+                m_swsSrcWidth != frame->width ||
+                m_swsSrcHeight != frame->height ||
+                m_swsDstWidth != m_codecCtx->width ||
+                m_swsDstHeight != m_codecCtx->height ||
+                m_swsInFmt != frame->format ||
+                m_swsOutFmt != targetSwFormat)
             {
                 if (m_swsContext)
                     sws_freeContext(m_swsContext);
                 m_swsContext = sws_getContext(frame->width, frame->height, (AVPixelFormat)frame->format,
-                                              frame->width, frame->height, targetSwFormat,
+                                              m_codecCtx->width, m_codecCtx->height, targetSwFormat,
                                               SWS_BILINEAR, nullptr, nullptr, nullptr);
-                m_swsWidth = frame->width;
-                m_swsHeight = frame->height;
+                m_swsSrcWidth = frame->width;
+                m_swsSrcHeight = frame->height;
+                m_swsDstWidth = m_codecCtx->width;
+                m_swsDstHeight = m_codecCtx->height;
                 m_swsInFmt = (AVPixelFormat)frame->format;
                 m_swsOutFmt = targetSwFormat;
-                spdlog::info("[VideoEncoder] Initialized SwsContext: {}x{} {} -> {}", m_swsWidth, m_swsHeight, av_get_pix_fmt_name(m_swsInFmt), av_get_pix_fmt_name(m_swsOutFmt));
+                spdlog::info("[VideoEncoder] Initialized SwsContext: {}x{} {} -> {}x{} {}",
+                             m_swsSrcWidth, m_swsSrcHeight, av_get_pix_fmt_name(m_swsInFmt),
+                             m_swsDstWidth, m_swsDstHeight, av_get_pix_fmt_name(m_swsOutFmt));
             }
             sws_scale(m_swsContext, frame->data, frame->linesize, 0, frame->height, swFrame->data, swFrame->linesize);
             swFrame->pts = frame->pts;
