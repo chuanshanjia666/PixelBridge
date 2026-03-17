@@ -5,5 +5,7 @@ set(VCPKG_CMAKE_SYSTEM_NAME Android)
 set(VCPKG_CMAKE_SYSTEM_VERSION 28)
 set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE "$ENV{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake")
 set(VCPKG_CMAKE_CONFIGURE_OPTIONS "-DANDROID_ABI=arm64-v8a;-DANDROID_PLATFORM=android-28;-DANDROID_STL=c++_shared")
+# Required so vcpkg_make_configure passes --host to autoconf-based ports (e.g. ICU)
+set(VCPKG_MAKE_BUILD_TRIPLET "--host=aarch64-linux-android")
 # Only build release to save disk space on CI
 set(VCPKG_BUILD_TYPE release)
