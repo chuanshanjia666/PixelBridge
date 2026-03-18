@@ -74,7 +74,13 @@ jobs:
             extra-cmake-modules \
             '^libxcb.*-dev' \
             libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev \
-            libxkbcommon-dev libxkbcommon-x11-dev libegl1-mesa-dev
+            libxkbcommon-dev libxkbcommon-x11-dev libegl1-mesa-dev \
+            libxcb-cursor-dev \
+            libpq-dev
+
+      - name: Use system Qt host tools
+        run: |
+          echo "QT_HOST_PATH=/usr" >> $GITHUB_ENV
 
       - name: Export vcpkg binary cache environment variables
         uses: actions/github-script@v7
@@ -95,6 +101,8 @@ jobs:
       - name: Install Android Qt and dependencies via vcpkg
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+          QT_HOST_PATH: /usr
+          VCPKG_KEEP_ENV_VARS: QT_HOST_PATH
         run: |
           "$VCPKG_ROOT/vcpkg" install \
             "qtbase:${{ matrix.vcpkg_triplet }}" \
@@ -107,7 +115,7 @@ jobs:
 
       - name: Configure with CMake preset
         run: |
-          cmake --preset android
+          cmake --preset android -DQT_HOST_PATH=/usr
 
       - name: Build with CMake preset
         run: cmake --build --preset android --parallel
