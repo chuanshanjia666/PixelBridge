@@ -5,8 +5,10 @@
 #include <QString>
 #include <QVideoSink>
 #include <memory>
+#include <string>
 #include <vector>
 #include <mutex>
+#include <unordered_map>
 #include "filters/QmlVideoSinkFilter.h"
 #include "core/Filter.h"
 
@@ -40,9 +42,13 @@ signals:
     void videoSinkChanged();
 
 private:
+    QString importAndroidContentToCache(const QUrl &url);
+
     pb::QmlVideoSinkFilter *m_qmlSink;
     std::mutex m_chainMutex;
     std::vector<std::vector<std::shared_ptr<pb::Filter>>> m_chains;
+    std::mutex m_androidCacheMutex;
+    std::unordered_map<std::string, std::string> m_androidImportedFiles;
 };
 
 #endif // BRIDGE_H

@@ -8,7 +8,14 @@
 #include "filters/ScreenCapture.h"
 #endif
 #include <thread>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QIODevice>
+#include <QRegularExpression>
+#include <QStandardPaths>
 #include <QUrl>
+#include <QUuid>
 #include <spdlog/spdlog.h>
 extern "C"
 {
@@ -372,5 +379,117 @@ void Bridge::startPush(const QString &input, const QString &output, const QStrin
 
 QString Bridge::urlToPath(const QUrl &url)
 {
+#if defined(Q_OS_ANDROID)
+    if (url.scheme() == "content")
+    {
+        const QString imported = importAndroidContentToCache(url);
+        if (!imported.isEmpty())
+        {
+            return imported;
+        }
+
+        // Fallback for Android content URI: some Qt/FFmpeg builds can still open it.
+        return url.toString();
+    }
+#endif
+
     return url.toLocalFile();
+}
+
+QString Bridge::importAndroidContentToCache(const QUrl &url)
+{
+#if !defined(Q_OS_ANDROID)
+    Q_UNUSED(url)
+    return QString();
+#else
+    const QString key = url.toString();
+    {
+        std::lock_guard<std::mutex> lock(m_androidCacheMutex);
+        auto it = m_androidImportedFiles.find(key.toStdString());
+        if (it != m_androidImportedFiles.end())
+        {
+            const QString existing = QString::fromStdString(it->second);
+            if (QFileInfo::exists(existing))
+            {
+                return existing;
+            }
+            m_androidImportedFiles.erase(it);
+        }
+    }
+
+    QFile src(key);
+    if (!src.open(QIODevice::ReadOnly))
+    {
+        spdlog::error("[Bridge] Failed to open Android content URI: {}", key.toStdString());
+        return QString();
+    }
+
+    QString cacheRoot = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (cacheRoot.isEmpty())
+    {
+        cacheRoot = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    }
+    if (cacheRoot.isEmpty())
+    {
+        spdlog::error("[Bridge] No writable cache path found for Android imported media");
+        return QString();
+    }
+
+    const QString dirPath = cacheRoot + "/imported_media";
+    QDir dir;
+    if (!dir.mkpath(dirPath))
+    {
+        spdlog::error("[Bridge] Failed to create media cache dir: {}", dirPath.toStdString());
+        return QString();
+    }
+
+    QString suffix = QFileInfo(url.path()).suffix();
+    if (!suffix.isEmpty())
+    {
+        suffix = "." + suffix;
+    }
+    else
+    {
+        suffix = ".bin";
+    }
+
+    const QString safeName = QUuid::createUuid().toString(QUuid::WithoutBraces).remove(QRegularExpression("[^A-Za-z0-9_-]"));
+    const QString dstPath = dirPath + "/" + safeName + suffix;
+
+    QFile dst(dstPath);
+    if (!dst.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        spdlog::error("[Bridge] Failed to create imported file: {}", dstPath.toStdString());
+        return QString();
+    }
+
+    constexpr qint64 kChunkSize = 1 << 20;
+    while (!src.atEnd())
+    {
+        const QByteArray chunk = src.read(kChunkSize);
+        if (chunk.isEmpty() && src.error() != QFileDevice::NoError)
+        {
+            spdlog::error("[Bridge] Failed while reading Android content URI: {}", key.toStdString());
+            dst.remove();
+            return QString();
+        }
+        if (!chunk.isEmpty() && dst.write(chunk) != chunk.size())
+        {
+            spdlog::error("[Bridge] Failed while writing imported media file: {}", dstPath.toStdString());
+            dst.remove();
+            return QString();
+        }
+    }
+
+    dst.close();
+    src.close();
+
+    {
+        std::lock_guard<std::mutex> lock(m_androidCacheMutex);
+        m_androidImportedFiles[key.toStdString()] = dstPath.toStdString();
+    }
+
+    spdlog::info("[Bridge] Imported Android content URI to {}", dstPath.toStdString());
+    return dstPath;
+#endif
 }
